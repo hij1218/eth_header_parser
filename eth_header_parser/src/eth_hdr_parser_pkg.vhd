@@ -47,10 +47,20 @@ package eth_hdr_parser_pkg is
     function is_eof_type(bt : std_logic_vector(7 downto 0)) return boolean;
 
     -- Helper function: swap 2 bytes (network to host order within a 66-bit block)
-    -- In 66-bit blocks, byte[0] is at bits[9:2], byte[1] at bits[17:10], etc.
-    -- The first transmitted byte (MSB of a 16-bit field) is at the LOWER bit position.
-    -- This function swaps to produce big-endian (network byte order) output.
     function ntohs(word : std_logic_vector(15 downto 0)) return std_logic_vector;
+
+    -- Array types for FCS pipeline (replaces eband_types_pkg dependency)
+    type word64_array_t is array (natural range <>) of std_logic_vector(63 downto 0);
+    type word8_array_t  is array (natural range <>) of std_logic_vector(7 downto 0);
+
+    -- Broadcast MAC address
+    constant MAC_BROADCAST : std_logic_vector(47 downto 0) := x"FFFFFFFFFFFF";
+
+    -- Minimum Ethernet frame size (DMAC+SMAC+EtherType+Payload+FCS = 64 bytes)
+    constant MIN_FRAME_SIZE : integer := 64;
+
+    -- Return number of data bytes in an EOF block (0-7) based on block type
+    function eof_data_bytes(bt : std_logic_vector(7 downto 0)) return integer;
 
 end package eth_hdr_parser_pkg;
 
@@ -73,6 +83,21 @@ package body eth_hdr_parser_pkg is
         -- byte[1] (second on wire, LSB) is at [15:8].
         -- Swap to produce standard big-endian: MSB at [15:8], LSB at [7:0].
         return word(7 downto 0) & word(15 downto 8);
+    end function;
+
+    function eof_data_bytes(bt : std_logic_vector(7 downto 0)) return integer is
+    begin
+        case bt is
+            when x"87" => return 0;  -- BT_EOF_T0: ZZZZZZZT
+            when x"99" => return 1;  -- BT_EOF_T1: ZZZZZZTD
+            when x"aa" => return 2;  -- BT_EOF_T2: ZZZZZTDD
+            when x"b4" => return 3;  -- BT_EOF_T3: ZZZZTDDD
+            when x"cc" => return 4;  -- BT_EOF_T4: ZZZTDDDD
+            when x"d2" => return 5;  -- BT_EOF_T5: ZZTDDDDD
+            when x"e1" => return 6;  -- BT_EOF_T6: ZTDDDDDD
+            when x"ff" => return 7;  -- BT_EOF_T7: TDDDDDDD
+            when others => return 0;
+        end case;
     end function;
 
 end package body eth_hdr_parser_pkg;

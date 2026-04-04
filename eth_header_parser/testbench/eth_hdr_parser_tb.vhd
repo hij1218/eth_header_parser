@@ -59,6 +59,19 @@ architecture sim of eth_hdr_parser_tb is
     signal eof_v       : std_logic;
     signal parse_error : std_logic;
 
+    -- L2 check signals
+    signal l2_good     : std_logic;
+    signal l2_bad      : std_logic;
+    signal mac_match   : std_logic;
+    signal mac_bcast   : std_logic;
+    signal frame_len   : std_logic_vector(15 downto 0);
+    signal frame_runt  : std_logic;
+    signal frame_jumbo : std_logic;
+
+    -- FCS check signals
+    signal fcs_good    : std_logic;
+    signal fcs_bad     : std_logic;
+
     -- Latency measurement
     signal sof_cycle   : integer := 0;
     signal cycle_count : integer := 0;
@@ -162,8 +175,12 @@ begin
         end if;
     end process;
 
-    -- DUT instantiation
+    -- DUT instantiation (G_STATION_MAC matches DMAC of test 1/11)
     dut : entity work.eth_hdr_parser_top
+    generic map (
+        G_STATION_MAC    => x"AABBCCDDEEFF",
+        G_MAX_FRAME_SIZE => 1518
+    )
     port map (
         clk         => clk,
         rst         => rst,
@@ -201,7 +218,16 @@ begin
         l4_src_port => l4_src_port,
         l4_dst_port => l4_dst_port,
         eof_v       => eof_v,
-        parse_error => parse_error
+        parse_error => parse_error,
+        l2_good     => l2_good,
+        l2_bad      => l2_bad,
+        mac_match   => mac_match,
+        mac_bcast   => mac_bcast,
+        frame_len   => frame_len,
+        frame_runt  => frame_runt,
+        frame_jumbo => frame_jumbo,
+        fcs_good    => fcs_good,
+        fcs_bad     => fcs_bad
     );
 
     ----------------------------------------------------------------
@@ -263,41 +289,43 @@ begin
         send_idles(clk, blk_d, blk_v, 5);
 
         ----------------------------------------------------------------
-        -- TEST 2: IPv4/TCP SOF2
-        -- Barrel shift: aligned = current[33:2] & prev[65:34]
-        --   aligned bytes[0:3] = prev block bytes[4:7]
-        --   aligned bytes[4:7] = curr block bytes[0:3]
-        -- So frame data goes at bytes[4:7] of each raw block,
-        -- with the NEXT block's bytes[0:3] completing the aligned word.
+        -- TEST 2: IPv4/UDP SOF2 — distinct addresses for waveform ID
+        --   DMAC = DE:AD:BE:EF:00:01, SMAC = CA:FE:BA:BE:00:02
+        --   SrcIP = 172.16.0.1, DstIP = 172.16.0.2
+        --   Proto = UDP, SrcPort = 0x1234, DstPort = 0x5678
+        --
+        -- Barrel shift: aligned = curr[33:2] & prev[65:34]
+        --   aligned bytes[0:3] from prev block bytes[4:7]
+        --   aligned bytes[4:7] from curr block bytes[0:3]
         ----------------------------------------------------------------
         test_num <= 2;
-        report "TEST 2: IPv4/TCP SOF2" severity note;
+        report "TEST 2: IPv4/UDP SOF2 (DMAC=DEADBEEF0001)" severity note;
 
         send_block(clk, blk_d, blk_v, make_sof2);
 
-        -- Raw block 1: bytes[0:3]=preamble(55,55,55,D5), bytes[4:7]=DMAC[0:3](AA,BB,CC,DD)
+        -- Raw block 1: bytes[0:3]=preamble, bytes[4:7]=DMAC[0:3](DE,AD,BE,EF)
         send_block(clk, blk_d, blk_v, make_data(
-            x"DD", x"CC", x"BB", x"AA", x"D5", x"55", x"55", x"55"));
+            x"EF", x"BE", x"AD", x"DE", x"D5", x"55", x"55", x"55"));
 
-        -- Raw block 2: bytes[0:3]=DMAC[4:5]+SMAC[0:1], bytes[4:7]=SMAC[2:5]
+        -- Raw block 2: bytes[0:3]=DMAC[4:5]+SMAC[0:1](00,01,CA,FE), bytes[4:7]=SMAC[2:5](BA,BE,00,02)
         send_block(clk, blk_d, blk_v, make_data(
-            x"66", x"55", x"44", x"33", x"22", x"11", x"FF", x"EE"));
+            x"02", x"00", x"BE", x"BA", x"FE", x"CA", x"01", x"00"));
 
-        -- Raw block 3: bytes[0:3]=EtherType(08,00)+IPv4(45,00), bytes[4:7]=IPv4[2:5](00,28,12,34)
+        -- Raw block 3: bytes[0:3]=EtherType(08,00)+IPv4(45,00), bytes[4:7]=TotalLen(00,2C)+ID(56,78)
         send_block(clk, blk_d, blk_v, make_data(
-            x"34", x"12", x"28", x"00", x"00", x"45", x"00", x"08"));
+            x"78", x"56", x"2C", x"00", x"00", x"45", x"00", x"08"));
 
-        -- Raw block 4: bytes[0:3]=IPv4[6:9](40,00,40,06), bytes[4:7]=IPv4[10:13](00,00,C0,A8)
+        -- Raw block 4: bytes[0:3]=Flags(40,00)+TTL(80)+Proto(11=UDP), bytes[4:7]=Cksum(00,00)+SrcIP(AC,10)
         send_block(clk, blk_d, blk_v, make_data(
-            x"A8", x"C0", x"00", x"00", x"06", x"40", x"00", x"40"));
+            x"10", x"AC", x"00", x"00", x"11", x"80", x"00", x"40"));
 
-        -- Raw block 5: bytes[0:3]=SrcIP[2:3]+DstIP[0:1](01,64,0A,00), bytes[4:7]=DstIP[2:3]+SrcPort(00,01,1F,90)
+        -- Raw block 5: bytes[0:3]=SrcIP[2:3]+DstIP[0:1](00,01,AC,10), bytes[4:7]=DstIP[2:3]+SrcPort(00,02,12,34)
         send_block(clk, blk_d, blk_v, make_data(
-            x"90", x"1F", x"01", x"00", x"00", x"0A", x"64", x"01"));
+            x"34", x"12", x"02", x"00", x"10", x"AC", x"01", x"00"));
 
-        -- Raw block 6: bytes[0:3]=DstPort+pad(00,50,00,00), bytes[4:7]=pad
+        -- Raw block 6: bytes[0:3]=DstPort+pad(56,78,00,00), bytes[4:7]=pad
         send_block(clk, blk_d, blk_v, make_data(
-            x"00", x"00", x"00", x"00", x"00", x"00", x"50", x"00"));
+            x"00", x"00", x"00", x"00", x"00", x"00", x"78", x"56"));
 
         -- Raw block 7: padding
         send_block(clk, blk_d, blk_v, make_data(
@@ -307,27 +335,45 @@ begin
         send_idles(clk, blk_d, blk_v, 5);
 
         ----------------------------------------------------------------
-        -- TEST 3: IPv4/TCP SOF3 (same alignment as SOF2, /Q/ ignored)
+        -- TEST 3: IPv4/TCP SOF3 — distinct addresses for waveform ID
+        --   DMAC = 00:11:22:33:44:55, SMAC = 66:77:88:99:AA:BB
+        --   SrcIP = 10.10.10.1, DstIP = 10.10.10.2
+        --   Proto = TCP, SrcPort = 0x0050 (80), DstPort = 0xC350 (50000)
+        --   SOF3 same barrel shift as SOF2
         ----------------------------------------------------------------
         test_num <= 3;
-        report "TEST 3: IPv4/TCP SOF3" severity note;
+        report "TEST 3: IPv4/TCP SOF3 (DMAC=001122334455)" severity note;
 
         send_block(clk, blk_d, blk_v, make_sof3);
-        -- Same DATA blocks as TEST 2 (barrel shift identical)
+
+        -- Raw block 1: bytes[0:3]=preamble, bytes[4:7]=DMAC[0:3](00,11,22,33)
         send_block(clk, blk_d, blk_v, make_data(
-            x"DD", x"CC", x"BB", x"AA", x"D5", x"55", x"55", x"55"));
+            x"33", x"22", x"11", x"00", x"D5", x"55", x"55", x"55"));
+
+        -- Raw block 2: bytes[0:3]=DMAC[4:5]+SMAC[0:1](44,55,66,77), bytes[4:7]=SMAC[2:5](88,99,AA,BB)
         send_block(clk, blk_d, blk_v, make_data(
-            x"66", x"55", x"44", x"33", x"22", x"11", x"FF", x"EE"));
+            x"BB", x"AA", x"99", x"88", x"77", x"66", x"55", x"44"));
+
+        -- Raw block 3: bytes[0:3]=EtherType(08,00)+IPv4(45,00), bytes[4:7]=TotalLen(00,28)+ID(AB,CD)
         send_block(clk, blk_d, blk_v, make_data(
-            x"34", x"12", x"28", x"00", x"00", x"45", x"00", x"08"));
+            x"CD", x"AB", x"28", x"00", x"00", x"45", x"00", x"08"));
+
+        -- Raw block 4: bytes[0:3]=Flags(40,00)+TTL(40)+Proto(06=TCP), bytes[4:7]=Cksum(00,00)+SrcIP(0A,0A)
         send_block(clk, blk_d, blk_v, make_data(
-            x"A8", x"C0", x"00", x"00", x"06", x"40", x"00", x"40"));
+            x"0A", x"0A", x"00", x"00", x"06", x"40", x"00", x"40"));
+
+        -- Raw block 5: bytes[0:3]=SrcIP[2:3]+DstIP[0:1](0A,01,0A,0A), bytes[4:7]=DstIP[2:3]+SrcPort(0A,02,00,50)
         send_block(clk, blk_d, blk_v, make_data(
-            x"90", x"1F", x"01", x"00", x"00", x"0A", x"64", x"01"));
+            x"50", x"00", x"02", x"0A", x"0A", x"0A", x"01", x"0A"));
+
+        -- Raw block 6: bytes[0:3]=DstPort+pad(C3,50,00,00), bytes[4:7]=pad
         send_block(clk, blk_d, blk_v, make_data(
-            x"00", x"00", x"00", x"00", x"00", x"00", x"50", x"00"));
+            x"00", x"00", x"00", x"00", x"00", x"00", x"50", x"C3"));
+
+        -- Raw block 7: padding
         send_block(clk, blk_d, blk_v, make_data(
             x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00"));
+
         send_block(clk, blk_d, blk_v, make_eof);
         send_idles(clk, blk_d, blk_v, 5);
 
@@ -419,6 +465,70 @@ begin
         send_idles(clk, blk_d, blk_v, 5);
 
         ----------------------------------------------------------------
+        -- TEST 11: SOF1 IPv4/TCP with correct FCS (64-byte frame)
+        -- DMAC=AABBCCDDEEFF (matches station MAC), CRC=0x8E856DE1
+        ----------------------------------------------------------------
+        test_num <= 11;
+        report "TEST 11: SOF1 IPv4/TCP with correct FCS" severity note;
+
+        send_block(clk, blk_d, blk_v, make_sof1);
+        -- Word 0: DMAC + SMAC partial
+        send_block(clk, blk_d, blk_v, make_data(
+            x"22", x"11", x"FF", x"EE", x"DD", x"CC", x"BB", x"AA"));
+        -- Word 1: SMAC cont + EtherType(0800) + IPv4(45 00)
+        send_block(clk, blk_d, blk_v, make_data(
+            x"00", x"45", x"00", x"08", x"66", x"55", x"44", x"33"));
+        -- Word 2: IPv4 TotalLen(0028) + ID(1234) + Flags(4000) + TTL(40) + Proto(06=TCP)
+        send_block(clk, blk_d, blk_v, make_data(
+            x"06", x"40", x"00", x"40", x"34", x"12", x"28", x"00"));
+        -- Word 3: Checksum + SrcIP(C0A80164) + DstIP partial
+        send_block(clk, blk_d, blk_v, make_data(
+            x"00", x"0A", x"64", x"01", x"A8", x"C0", x"00", x"00"));
+        -- Word 4: DstIP cont + TCP SrcPort(1F90) + DstPort(0050) + seq
+        send_block(clk, blk_d, blk_v, make_data(
+            x"00", x"00", x"50", x"00", x"90", x"1F", x"01", x"00"));
+        -- Word 5: TCP ack + flags(SYN+ACK) + window
+        send_block(clk, blk_d, blk_v, make_data(
+            x"02", x"50", x"00", x"00", x"00", x"00", x"00", x"00"));
+        -- Word 6: TCP checksum + urgent + padding
+        send_block(clk, blk_d, blk_v, make_data(
+            x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"20"));
+        -- Word 7: padding + FCS (E1 6D 85 8E)
+        send_block(clk, blk_d, blk_v, make_data(
+            x"8E", x"85", x"6D", x"E1", x"00", x"00", x"00", x"00"));
+        -- EOF
+        send_block(clk, blk_d, blk_v, make_eof);
+        send_idles(clk, blk_d, blk_v, 10);
+
+        ----------------------------------------------------------------
+        -- TEST 12: SOF1 IPv4/TCP with CORRUPTED FCS (bit flip in FCS)
+        -- Same frame as test 11 but FCS byte 0 changed: E1->E0
+        ----------------------------------------------------------------
+        test_num <= 12;
+        report "TEST 12: SOF1 IPv4/TCP with bad FCS" severity note;
+
+        send_block(clk, blk_d, blk_v, make_sof1);
+        send_block(clk, blk_d, blk_v, make_data(
+            x"22", x"11", x"FF", x"EE", x"DD", x"CC", x"BB", x"AA"));
+        send_block(clk, blk_d, blk_v, make_data(
+            x"00", x"45", x"00", x"08", x"66", x"55", x"44", x"33"));
+        send_block(clk, blk_d, blk_v, make_data(
+            x"06", x"40", x"00", x"40", x"34", x"12", x"28", x"00"));
+        send_block(clk, blk_d, blk_v, make_data(
+            x"00", x"0A", x"64", x"01", x"A8", x"C0", x"00", x"00"));
+        send_block(clk, blk_d, blk_v, make_data(
+            x"00", x"00", x"50", x"00", x"90", x"1F", x"01", x"00"));
+        send_block(clk, blk_d, blk_v, make_data(
+            x"02", x"50", x"00", x"00", x"00", x"00", x"00", x"00"));
+        send_block(clk, blk_d, blk_v, make_data(
+            x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"20"));
+        -- Corrupted FCS: E0 instead of E1
+        send_block(clk, blk_d, blk_v, make_data(
+            x"8E", x"85", x"6D", x"E0", x"00", x"00", x"00", x"00"));
+        send_block(clk, blk_d, blk_v, make_eof);
+        send_idles(clk, blk_d, blk_v, 10);
+
+        ----------------------------------------------------------------
         -- Done
         ----------------------------------------------------------------
         wait for CLK_PERIOD * 20;
@@ -491,6 +601,31 @@ begin
                 report "  [ERROR] test=" & integer'image(test_num) &
                        " parse_error asserted"
                     severity warning;
+            end if;
+
+            if l2_good = '1' then
+                report "  [L2_GOOD] test=" & integer'image(test_num) &
+                       " len=" & integer'image(to_integer(unsigned(frame_len))) &
+                       " match=" & std_logic'image(mac_match) &
+                       " bcast=" & std_logic'image(mac_bcast)
+                    severity note;
+            end if;
+            if l2_bad = '1' then
+                report "  [L2_BAD] test=" & integer'image(test_num) &
+                       " len=" & integer'image(to_integer(unsigned(frame_len))) &
+                       " match=" & std_logic'image(mac_match) &
+                       " runt=" & std_logic'image(frame_runt) &
+                       " jumbo=" & std_logic'image(frame_jumbo)
+                    severity note;
+            end if;
+
+            if fcs_good = '1' then
+                report "  [FCS_GOOD] test=" & integer'image(test_num)
+                    severity note;
+            end if;
+            if fcs_bad = '1' then
+                report "  [FCS_BAD] test=" & integer'image(test_num)
+                    severity note;
             end if;
         end if;
     end process monitor_p;
