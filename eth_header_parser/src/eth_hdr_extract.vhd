@@ -69,11 +69,15 @@ architecture rtl of eth_hdr_extract is
     signal word_cnt : unsigned(4 downto 0) := (others => '0');
 
     -- Saved partial fields across words
-    signal smac_lo      : std_logic_vector(15 downto 0);  -- SMAC[0:1] from word 0
-    signal ipv4_dst_hi  : std_logic_vector(15 downto 0);  -- DstIP[0:1] from word 3
-    signal ipv6_src_lo  : std_logic_vector(63 downto 0);  -- IPv6 src low from word 4
-    signal ipv6_dst_hi  : std_logic_vector(63 downto 0);  -- IPv6 dst high from word 5
-    signal l3_proto_reg : std_logic_vector(7 downto 0);   -- protocol/next-header
+    signal smac_lo       : std_logic_vector(15 downto 0);  -- SMAC[0:1] from word 0
+    signal ipv4_dst_hi   : std_logic_vector(15 downto 0);  -- DstIP[0:1] from word 3
+    signal ipv6_src_b01  : std_logic_vector(15 downto 0);  -- IPv6 SrcAddr[0:1] from word 2
+    signal ipv6_src_mid  : std_logic_vector(63 downto 0);  -- IPv6 SrcAddr[2:9] from word 3
+    signal ipv6_src_tail : std_logic_vector(47 downto 0);  -- IPv6 SrcAddr[10:15] from word 4
+    signal ipv6_dst_b01  : std_logic_vector(15 downto 0);  -- IPv6 DstAddr[0:1] from word 4
+    signal ipv6_dst_mid  : std_logic_vector(63 downto 0);  -- IPv6 DstAddr[2:9] from word 5
+    signal ipv6_l4_sport : std_logic_vector(15 downto 0);  -- IPv6 L4 SrcPort from word 6
+    signal l3_proto_reg  : std_logic_vector(7 downto 0);   -- protocol/next-header
 
     -- EtherType tracking for VLAN decode
     signal raw_etype    : std_logic_vector(15 downto 0);  -- First EtherType seen
@@ -245,10 +249,11 @@ begin
                                 ethertype_v <= '1';
                                 vlan_count  <= "01";
                                 if etype_at_w2 = ETYPE_IPV4 then
-                                    is_ip4_reg <= '1';
-                                    is_ipv4    <= '1';
-                                    ipv4_ihl   <= aligned_d(19 downto 16);
-                                    ipv4_dscp  <= aligned_d(31 downto 26);
+                                    is_ip4_reg  <= '1';
+                                    is_ipv4     <= '1';
+                                    ipv4_ihl    <= aligned_d(19 downto 16);
+                                    ipv4_dscp   <= aligned_d(31 downto 26);
+                                    ipv4_totlen <= extract16(aligned_d, 4);  -- bytes 4-5 = IPv4[2:3]
                                 elsif etype_at_w2 = ETYPE_IPV6 then
                                     is_ip6_reg <= '1';
                                     is_ipv6    <= '1';
@@ -262,20 +267,14 @@ begin
                                 ipv4_proto  <= aligned_d(63 downto 56);  -- byte 7 = Protocol
                                 l3_proto_reg <= aligned_d(63 downto 56);
                             elsif is_ip6_reg = '1' then
-                                -- IPv6[2:9]: PayloadLen/NextHeader/HopLimit + Src[0:3]
-                                ipv6_plen   <= extract16(aligned_d, 0);
-                                ipv6_nhdr   <= aligned_d(23 downto 16);  -- byte 2 relative = NextHeader...
-                                -- IPv6 header: bytes 0-3 = Ver/TC/FlowLabel, byte 4-5 = PayloadLen
-                                -- byte 6 = NextHeader, byte 7 = HopLimit
-                                -- At word 1 we had IPv6[0:1], so word 2 starts at IPv6[2]
-                                -- IPv6 layout in word 2: IPv6[2:9]
-                                -- byte0=IPv6[2], byte1=IPv6[3] (still Ver/TC/Flow)
-                                -- byte2=IPv6[4]=PayloadLen MSB, byte3=IPv6[5]=PayloadLen LSB
-                                -- byte4=IPv6[6]=NextHeader, byte5=IPv6[7]=HopLimit
-                                -- byte6=IPv6[8]=SrcAddr[0], byte7=IPv6[9]=SrcAddr[1]
+                                -- IPv6[2:9] in this word:
+                                -- byte0-1=TC/FlowLabel, byte2-3=PayloadLen,
+                                -- byte4=NextHeader, byte5=HopLimit,
+                                -- byte6-7=SrcAddr[0:1]
                                 ipv6_plen    <= extract16(aligned_d, 2);  -- bytes 2-3
                                 ipv6_nhdr    <= aligned_d(39 downto 32);  -- byte 4
                                 l3_proto_reg <= aligned_d(39 downto 32);
+                                ipv6_src_b01 <= extract16(aligned_d, 6);  -- bytes 6-7 = SrcAddr[0:1]
                             end if;
                         end if;
 
@@ -290,20 +289,21 @@ begin
                             ethertype_v <= '1';
                             vlan_count  <= "10";
                             if etype_at_w3 = ETYPE_IPV4 then
-                                is_ip4_reg <= '1';
-                                is_ipv4    <= '1';
-                                ipv4_ihl   <= aligned_d(19 downto 16);
-                                ipv4_dscp  <= aligned_d(31 downto 26);
+                                is_ip4_reg  <= '1';
+                                is_ipv4     <= '1';
+                                ipv4_ihl    <= aligned_d(19 downto 16);
+                                ipv4_dscp   <= aligned_d(31 downto 26);
+                                ipv4_totlen <= extract16(aligned_d, 4);  -- bytes 4-5 = IPv4[2:3]
                             elsif etype_at_w3 = ETYPE_IPV6 then
                                 is_ip6_reg <= '1';
                                 is_ipv6    <= '1';
                             end if;
                         elsif vlan_state = "01" then
-                            -- 1 VLAN: L3 header continuation
+                            -- 1 VLAN: IPv4[6:13] or IPv6 continuation
                             if is_ip4_reg = '1' then
-                                ipv4_totlen  <= extract16(aligned_d, 0);
-                                ipv4_proto   <= aligned_d(63 downto 56);
-                                l3_proto_reg <= aligned_d(63 downto 56);
+                                -- byte 3 = IPv4[9] = Protocol
+                                ipv4_proto   <= aligned_d(31 downto 24);
+                                l3_proto_reg <= aligned_d(31 downto 24);
                             elsif is_ip6_reg = '1' then
                                 ipv6_plen    <= extract16(aligned_d, 2);
                                 ipv6_nhdr    <= aligned_d(39 downto 32);
@@ -316,11 +316,11 @@ begin
                                 ipv4_src    <= extract32(aligned_d, 2);  -- bytes 2-5
                                 ipv4_dst_hi <= extract16(aligned_d, 6);  -- bytes 6-7 = DstIP[0:1]
                             elsif is_ip6_reg = '1' then
-                                -- IPv6[10:17]: SrcAddr[2:9]
-                                ipv6_src_lo <= aligned_d(7 downto 0) & aligned_d(15 downto 8)
-                                             & aligned_d(23 downto 16) & aligned_d(31 downto 24)
-                                             & aligned_d(39 downto 32) & aligned_d(47 downto 40)
-                                             & aligned_d(55 downto 48) & aligned_d(63 downto 56);
+                                -- IPv6[10:17]: SrcAddr[2:9] (8 bytes, full word)
+                                ipv6_src_mid <= aligned_d(7 downto 0) & aligned_d(15 downto 8)
+                                              & aligned_d(23 downto 16) & aligned_d(31 downto 24)
+                                              & aligned_d(39 downto 32) & aligned_d(47 downto 40)
+                                              & aligned_d(55 downto 48) & aligned_d(63 downto 56);
                             end if;
                         end if;
 
@@ -343,13 +343,11 @@ begin
                             end if;
 
                         elsif vlan_state = "00" and is_ip6_reg = '1' then
-                            -- IPv6[18:25]: SrcAddr[10:15] + DstAddr[0:1]
-                            -- We had SrcAddr[2:9] from word 3 (ipv6_src_lo)
-                            -- Word 2 had SrcAddr[0:1] at bytes 6-7
-                            -- This is getting complex. Let me accumulate.
-                            -- IPv6 src = 16 bytes starting at IPv6[8]
-                            -- word 2 bytes 6-7 = Src[0:1], word 3 = Src[2:9], word 4 bytes 0-5 = Src[10:15]
-                            null; -- Accumulate, output at later word
+                            -- IPv6[18:25]: SrcAddr[10:15](bytes 0-5) + DstAddr[0:1](bytes 6-7)
+                            ipv6_src_tail <= aligned_d(7 downto 0) & aligned_d(15 downto 8)
+                                           & aligned_d(23 downto 16) & aligned_d(31 downto 24)
+                                           & aligned_d(39 downto 32) & aligned_d(47 downto 40);
+                            ipv6_dst_b01  <= extract16(aligned_d, 6);
 
                         elsif vlan_state = "01" and is_ip4_reg = '1' then
                             -- 1 VLAN + IPv4: same as no-VLAN word 3
@@ -357,11 +355,11 @@ begin
                             ipv4_dst_hi <= extract16(aligned_d, 6);
 
                         elsif vlan_state = "10" then
-                            -- 2 VLAN: L3 continuation
+                            -- 2 VLAN: IPv4[6:13] or IPv6 continuation
                             if is_ip4_reg = '1' then
-                                ipv4_totlen  <= extract16(aligned_d, 0);
-                                ipv4_proto   <= aligned_d(63 downto 56);
-                                l3_proto_reg <= aligned_d(63 downto 56);
+                                -- byte 3 = IPv4[9] = Protocol
+                                ipv4_proto   <= aligned_d(31 downto 24);
+                                l3_proto_reg <= aligned_d(31 downto 24);
                             elsif is_ip6_reg = '1' then
                                 ipv6_plen    <= extract16(aligned_d, 2);
                                 ipv6_nhdr    <= aligned_d(39 downto 32);
@@ -392,11 +390,11 @@ begin
                             ipv4_dst_hi <= extract16(aligned_d, 6);
 
                         elsif vlan_state = "00" and is_ip6_reg = '1' then
-                            -- No VLAN + IPv6: DstAddr continuation
-                            ipv6_dst_hi <= aligned_d(7 downto 0) & aligned_d(15 downto 8)
-                                         & aligned_d(23 downto 16) & aligned_d(31 downto 24)
-                                         & aligned_d(39 downto 32) & aligned_d(47 downto 40)
-                                         & aligned_d(55 downto 48) & aligned_d(63 downto 56);
+                            -- No VLAN + IPv6: DstAddr[2:9] (8 bytes, full word)
+                            ipv6_dst_mid <= aligned_d(7 downto 0) & aligned_d(15 downto 8)
+                                          & aligned_d(23 downto 16) & aligned_d(31 downto 24)
+                                          & aligned_d(39 downto 32) & aligned_d(47 downto 40)
+                                          & aligned_d(55 downto 48) & aligned_d(63 downto 56);
                         end if;
 
                     --------------------------------------------------------
@@ -417,15 +415,18 @@ begin
                             end if;
 
                         elsif vlan_state = "00" and is_ip6_reg = '1' then
-                            -- No VLAN + IPv6: DstAddr[8:15] + L4 ports
-                            -- Assemble full IPv6 dst from word 5 (hi) + word 6 bytes 0-7
-                            ipv6_dst <= ipv6_dst_hi
+                            -- No VLAN + IPv6 word 6:
+                            -- bytes 0-5 = DstAddr[10:15], bytes 6-7 = L4 SrcPort
+                            -- Assemble full ipv6_src: b01(16) + mid(64) + tail(48) = 128
+                            ipv6_src <= ipv6_src_b01 & ipv6_src_mid & ipv6_src_tail;
+                            -- Assemble full ipv6_dst: b01(16) + mid(64) + word6[0:5](48) = 128
+                            ipv6_dst <= ipv6_dst_b01 & ipv6_dst_mid
                                       & aligned_d(7 downto 0) & aligned_d(15 downto 8)
                                       & aligned_d(23 downto 16) & aligned_d(31 downto 24)
-                                      & aligned_d(39 downto 32) & aligned_d(47 downto 40)
-                                      & aligned_d(55 downto 48) & aligned_d(63 downto 56);
-                            -- IPv6 src was assembled from words 2-4
+                                      & aligned_d(39 downto 32) & aligned_d(47 downto 40);
                             ipv6_v <= '1';
+                            -- Save L4 SrcPort at bytes 6-7 for next word
+                            ipv6_l4_sport <= extract16(aligned_d, 6);
 
                         end if;
 
@@ -434,8 +435,10 @@ begin
                     --------------------------------------------------------
                     when 7 =>
                         if vlan_state = "00" and is_ip6_reg = '1' then
-                            l4_src_port <= extract16(aligned_d, 0);
-                            l4_dst_port <= extract16(aligned_d, 2);
+                            -- L4 SrcPort was at word 6 bytes 6-7 (saved in ipv6_l4_sport)
+                            -- L4 DstPort at word 7 bytes 0-1
+                            l4_src_port <= ipv6_l4_sport;
+                            l4_dst_port <= extract16(aligned_d, 0);
                             l4_ports_v  <= '1';
                             if l3_proto_reg = IP_PROTO_TCP then
                                 is_tcp <= '1';

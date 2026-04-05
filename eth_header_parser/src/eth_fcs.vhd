@@ -63,8 +63,31 @@ architecture Behavioral of eth_fcs is
    signal spo80      : std_logic_vector(31 downto 0);
    signal spo88      : std_logic_vector(31 downto 0);
    signal slice      : slice_t;
-   signal crcgen     : std_logic_vector(31 downto 0);
    signal set_fcs_reg : std_logic := '0';
+
+   -- 500 MHz pipeline break:
+   --   sliced/slice are registered (sliced_q/slice_q) before ROM lookup,
+   --   splitting the combinational CRC feedback loop into 2 clock stages.
+   --   Upstream (eth_fcs_bridge) guarantees clk_en is max 50% duty, so
+   --   crc_reg updates 1 cycle after sliced_q was registered, before the
+   --   next clk_en tick uses crc_reg to compute the next sliced.
+   signal sliced_q   : std_logic_vector(63 downto 0) := (others=>'0');
+   signal slice_q    : slice_t := full8;
+   signal crc_wr_req : std_logic := '0';
+   signal crcgen_new : std_logic_vector(31 downto 0);
+
+   -- Keep the 256x32 CRC ROM lookups in LUT-based distributed memory.
+   -- With the registered address (sliced_q), Vivado would otherwise
+   -- infer BRAM whose ~1.1 ns clock-to-out kills the 500 MHz budget.
+   attribute rom_style : string;
+   attribute rom_style of spo32 : signal is "distributed";
+   attribute rom_style of spo40 : signal is "distributed";
+   attribute rom_style of spo48 : signal is "distributed";
+   attribute rom_style of spo56 : signal is "distributed";
+   attribute rom_style of spo64 : signal is "distributed";
+   attribute rom_style of spo72 : signal is "distributed";
+   attribute rom_style of spo80 : signal is "distributed";
+   attribute rom_style of spo88 : signal is "distributed";
 
 begin
 
@@ -76,16 +99,32 @@ begin
             pipe_valid <= (others=>(others=>'0'));
             good_fcs <= '0';
             bad_fcs <= '0';
-         elsif clk_en = '1' then
-            state <= nxt_state;
-            pipe(0) <= din;
-            pipe_valid(0) <= din_v;
-            for i in 1 to pipe'high loop
-               pipe(i) <= pipe(i-1);
-               pipe_valid(i) <= pipe_valid(i-1);
-            end loop;
-            good_fcs <= '0';
-            bad_fcs <= '0';
+            sliced_q <= (others=>'0');
+            slice_q  <= full8;
+            crc_wr_req <= '0';
+            crc_reg  <= (others=>'1');
+         else
+            -- Pipelined CRC update: fires 1 cycle after sliced_q/slice_q
+            -- were registered. clk_en is max 50% duty from bridge, so
+            -- crc_reg always settles before the next clk_en tick.
+            if crc_wr_req = '1' then
+               crc_reg    <= crcgen_new;
+               crc_wr_req <= '0';
+            end if;
+
+            if clk_en = '1' then
+               state <= nxt_state;
+               pipe(0) <= din;
+               pipe_valid(0) <= din_v;
+               for i in 1 to pipe'high loop
+                  pipe(i) <= pipe(i-1);
+                  pipe_valid(i) <= pipe_valid(i-1);
+               end loop;
+               good_fcs <= '0';
+               bad_fcs <= '0';
+               -- Register sliced/slice for pipelined CRC feedback loop
+               sliced_q <= sliced;
+               slice_q  <= slice;
             case state is
             when sof1_s =>
                -- SOF1 is at pipe(2)
@@ -94,7 +133,7 @@ begin
                -- SOF2 is at pipe(2)
                slice <= sof2;
             when frame_s =>
-               crc_reg <= crcgen;
+               crc_wr_req <= '1';
                slice <= full8;
             when eof1_s =>
                -- EOF is at pipe(1)
@@ -104,7 +143,7 @@ begin
                when "00000111" => slice <= eof7;
                when others => slice <= full8;
                end case;
-               crc_reg <= crcgen;
+               crc_wr_req <= '1';
                set_fcs_reg <= set_fcs;
             when eof2_s =>
                -- EOF is at pipe(2)
@@ -115,7 +154,7 @@ begin
                when "11111111" => slice <= eof4;
                when others => null;
                end case;
-               crc_reg <= crcgen;
+               crc_wr_req <= '1';
             when eof3_s =>
                -- EOF is at pipe(3)
                case pipe_valid(3) is
@@ -161,10 +200,10 @@ begin
                   else
                      bad_fcs <= '1';
                   end if;
-               when "00011111" => crc_reg <= crcgen; -- 8 bit
-               when "00111111" => crc_reg <= crcgen; -- 16 bit
-               when "01111111" => crc_reg <= crcgen; -- 24 bit
-               when "11111111" => crc_reg <= crcgen; -- 32 bit
+               when "00011111" => crc_wr_req <= '1'; -- 8 bit
+               when "00111111" => crc_wr_req <= '1'; -- 16 bit
+               when "01111111" => crc_wr_req <= '1'; -- 24 bit
+               when "11111111" => crc_wr_req <= '1'; -- 32 bit
                when others => null;
                end case;
                -- Process possible SOF at pipe(2)
@@ -216,7 +255,7 @@ begin
                end case;
                -- Process possible back-to-back SOFs at pipe(3) or pipe(2)
                if pipe_valid(3) = "11110000" then
-                  crc_reg <= crcgen;
+                  crc_wr_req <= '1';
                   slice <= full8;
                elsif pipe_valid(2) = "11111111" then
                   slice <= sof1;
@@ -225,7 +264,8 @@ begin
                end if;
             when others => null;
             end case;
-         end if;
+            end if;  -- clk_en
+         end if;  -- rst
       end if;
    end process pipe_p;
 
@@ -276,78 +316,99 @@ begin
 
    pipe_eof <= '1' when pipe_valid(0) /= "11111111" or ( pipe_valid(0)(7) = '1' and din_v(0) = '0' ) else '0';
 
-   -- Combinatorial logic to calculate CRCs for varying data widths
-   crcgen_p : process(slice,pipe(3),sliced,crc_reg,spo32,spo40,spo48,spo56,spo64,spo72,spo80,spo88)
+   -- Stage 1: compute sliced combinationally from crc_reg, pipe(3), slice.
+   -- Registered into sliced_q at end of each clk_en='1' cycle by pipe_p.
+   sliced_p : process(slice,pipe(3),crc_reg)
    begin
       case slice is
       when sof1 =>
          -- Special case of slice by 8 for SOF1 which uses an initial value of xFFFFFFFF
          sliced(31 downto 0) <= not pipe(3)(31 downto 0);
          sliced(63 downto 32) <= pipe(3)(63 downto 32);
-         crcgen <= spo32 xor spo40 xor spo48 xor spo56 xor spo64 xor spo72
-                      xor spo80 xor spo88;
       when sof2 =>
          -- Special case of slice by 4 for SOF2 which uses an initial value of xFFFFFFFF
          sliced(31 downto 0) <= x"00000000";
          sliced(63 downto 32) <= not pipe(3)(63 downto 32);
-         crcgen <= spo32 xor spo40 xor spo48 xor spo56;
       when eof1 =>
          -- Sarwate
          sliced(55 downto 0) <= x"00000000000000";
          sliced(63 downto 56) <= pipe(3)(7 downto 0) xor crc_reg(7 downto 0);
-         crcgen <= spo32 xor ( x"00" & crc_reg(31 downto 8) );
       when eof2 =>
          -- Slice by 2
          sliced(47 downto 0) <= x"000000000000";
          sliced(63 downto 48) <= pipe(3)(15 downto 0) xor crc_reg(15 downto 0);
-         crcgen <= spo32 xor spo40 xor ( x"0000" & crc_reg(31 downto 16) );
       when eof3 =>
          -- Slice by 3
          sliced(39 downto 0) <= x"0000000000";
          sliced(63 downto 40) <= pipe(3)(23 downto 0) xor crc_reg(23 downto 0);
-         crcgen <= spo32 xor spo40 xor spo48 xor ( x"000000" & crc_reg(31 downto 24) );
       when eof4 =>
          -- Slice by 4
          sliced(31 downto 0) <= x"00000000";
          sliced(63 downto 32) <= pipe(3)(31 downto 0) xor crc_reg;
-         crcgen <= spo32 xor spo40 xor spo48 xor spo56;
       when eof5 =>
          -- Slice by 5
          sliced(31 downto 0) <= ( pipe(3)(7 downto 0) xor crc_reg(7 downto 0) ) & x"000000";
          sliced(63 downto 32) <= pipe(3)(39 downto 32) & ( pipe(3)(31 downto 8) xor crc_reg(31 downto 8) );
-         crcgen <= spo32 xor spo40 xor spo48 xor spo56 xor spo64;
       when eof6 =>
          -- Slice by 6
          sliced(31 downto 0) <= ( pipe(3)(15 downto 0) xor crc_reg(15 downto 0) ) & x"0000";
          sliced(63 downto 32) <= pipe(3)(47 downto 32) & ( pipe(3)(31 downto 16) xor crc_reg(31 downto 16) ) ;
-         crcgen <= spo32 xor spo40 xor spo48 xor spo56 xor spo64 xor spo72;
       when eof7 =>
          -- Slice by 7
          sliced(31 downto 0) <= ( pipe(3)(23 downto 0) xor crc_reg(23 downto 0) ) & x"00";
          sliced(63 downto 32) <= pipe(3)(55 downto 32) & ( pipe(3)(31 downto 24) xor crc_reg(31 downto 24));
-         crcgen <= spo32 xor spo40 xor spo48 xor spo56 xor spo64 xor spo72
-                        xor spo80;
       when full8 =>
          -- Slice by 8
          sliced(31 downto 0) <= pipe(3)(31 downto 0) xor crc_reg;
          sliced(63 downto 32) <= pipe(3)(63 downto 32);
-         crcgen <= spo32 xor spo40 xor spo48 xor spo56 xor spo64 xor spo72
-                      xor spo80 xor spo88;
       end case;
-   end process crcgen_p;
+   end process sliced_p;
+
+   -- Stage 2: combine ROM outputs (from registered sliced_q) with
+   -- current crc_reg (for eof1..eof3) to produce crcgen_new. Case-muxed
+   -- on slice_q which was captured alongside sliced_q.
+   crcgen_new_p : process(slice_q,crc_reg,spo32,spo40,spo48,spo56,spo64,spo72,spo80,spo88)
+   begin
+      case slice_q is
+      when sof1 =>
+         crcgen_new <= spo32 xor spo40 xor spo48 xor spo56 xor spo64 xor spo72
+                           xor spo80 xor spo88;
+      when sof2 =>
+         crcgen_new <= spo32 xor spo40 xor spo48 xor spo56;
+      when eof1 =>
+         crcgen_new <= spo32 xor ( x"00" & crc_reg(31 downto 8) );
+      when eof2 =>
+         crcgen_new <= spo32 xor spo40 xor ( x"0000" & crc_reg(31 downto 16) );
+      when eof3 =>
+         crcgen_new <= spo32 xor spo40 xor spo48 xor ( x"000000" & crc_reg(31 downto 24) );
+      when eof4 =>
+         crcgen_new <= spo32 xor spo40 xor spo48 xor spo56;
+      when eof5 =>
+         crcgen_new <= spo32 xor spo40 xor spo48 xor spo56 xor spo64;
+      when eof6 =>
+         crcgen_new <= spo32 xor spo40 xor spo48 xor spo56 xor spo64 xor spo72;
+      when eof7 =>
+         crcgen_new <= spo32 xor spo40 xor spo48 xor spo56 xor spo64 xor spo72
+                           xor spo80;
+      when full8 =>
+         crcgen_new <= spo32 xor spo40 xor spo48 xor spo56 xor spo64 xor spo72
+                           xor spo80 xor spo88;
+      end case;
+   end process crcgen_new_p;
 
    crc_reg_n <= not crc_reg;
    dout <= pipe(pipe'high);
    dout_v <= pipe_valid(pipe'high);
 
-   spo32 <= crc64_o32(to_integer(unsigned(sliced(63 downto 56))));
-   spo40 <= crc64_o40(to_integer(unsigned(sliced(55 downto 48))));
-   spo48 <= crc64_o48(to_integer(unsigned(sliced(47 downto 40))));
-   spo56 <= crc64_o56(to_integer(unsigned(sliced(39 downto 32))));
-   spo64 <= crc64_o64(to_integer(unsigned(sliced(31 downto 24))));
-   spo72 <= crc64_o72(to_integer(unsigned(sliced(23 downto 16))));
-   spo80 <= crc64_o80(to_integer(unsigned(sliced(15 downto 8))));
-   spo88 <= crc64_o88(to_integer(unsigned(sliced(7 downto 0))));
+   -- ROMs index the registered sliced_q (stage-2 lookups)
+   spo32 <= crc64_o32(to_integer(unsigned(sliced_q(63 downto 56))));
+   spo40 <= crc64_o40(to_integer(unsigned(sliced_q(55 downto 48))));
+   spo48 <= crc64_o48(to_integer(unsigned(sliced_q(47 downto 40))));
+   spo56 <= crc64_o56(to_integer(unsigned(sliced_q(39 downto 32))));
+   spo64 <= crc64_o64(to_integer(unsigned(sliced_q(31 downto 24))));
+   spo72 <= crc64_o72(to_integer(unsigned(sliced_q(23 downto 16))));
+   spo80 <= crc64_o80(to_integer(unsigned(sliced_q(15 downto 8))));
+   spo88 <= crc64_o88(to_integer(unsigned(sliced_q(7 downto 0))));
 
 end Behavioral;
 

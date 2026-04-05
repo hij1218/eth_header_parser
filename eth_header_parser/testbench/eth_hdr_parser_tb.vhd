@@ -657,39 +657,16 @@ begin
         -- Word 5: Dst[2:9]=(0D,B8,00,02,00,00,00,00)
         send_block(clk, blk_d, blk_v, make_data(
             x"00", x"00", x"00", x"00", x"02", x"00", x"B8", x"0D"));
-        -- Word 6: Dst[10:15]+padding=(00,00,00,02,00,00,1F,90)
-        -- Dst[10:15]=00,00,00,00,00,02, then L4 starts
-        -- But ipv6_dst assembly at word 6 takes all 8 bytes as dst lower half
-        -- L4 SrcPort MSB at byte 6, LSB at byte 7 → will be captured in word 7
+        -- Word 6: Dst[10:15](6B) + L4 SrcPort(2B)
+        -- Dst[10:15]=00,00,00,00,00,02
+        -- L4 SrcPort=0x1F90 at bytes 6-7 (captured by extract into ipv6_l4_sport)
         send_block(clk, blk_d, blk_v, make_data(
             x"90", x"1F", x"02", x"00", x"00", x"00", x"00", x"00"));
-        -- Word 7: L4 ports: SrcPort+DstPort at bytes 0-3
-        -- extract16(aligned_d, 0) = SrcPort, extract16(aligned_d, 2) = DstPort
-        -- byte0=SrcPort MSB=0x00(already sent above), need proper alignment
-        -- Actually L4 starts at IPv6[40] = word 6 byte 6
-        -- So word 7 byte 0-1 = L4[2:3] = DstPort MSB, LSB
-        -- Wait — let me reconsider. L4[0:1] is at word 6 bytes 6-7.
-        -- L4[2:3] (DstPort) is at word 7 bytes 0-1.
-        -- But extract at word 7 does: l4_src_port=extract16(aligned_d,0), l4_dst_port=extract16(aligned_d,2)
-        -- So extract expects SrcPort at word 7 bytes 0-1, DstPort at bytes 2-3.
-        -- This means L4 starts at word 7 byte 0, NOT word 6 byte 6!
-        -- IPv6 header = 40 bytes.
-        -- word 1 bytes 6-7 (2) + word 2 (8) + word 3 (8) + word 4 (8) + word 5 (8) + word 6 bytes 0-5 (6) = 40 ✓
-        -- L4 starts at word 6 byte 6. So SrcPort = word 6 bytes 6-7 + word 7 bytes 0-1?
-        -- No! SrcPort is 2 bytes. SrcPort = word 6 byte 6 + byte 7.
-        -- But extract reads SrcPort at word 7 bytes 0-1.
-        -- This is a misalignment! The extract module assumes L4 starts at word 7 byte 0.
-        -- But actually L4 starts at word 6 byte 6. Off by 2 bytes.
-        -- So I need to put the 4 TCP port bytes starting at word 6 byte 6:
-        -- word 6: ..., byte6=SrcPort MSB(1F), byte7=SrcPort LSB(90)
-        -- word 7: byte0=DstPort MSB(00), byte1=DstPort LSB(50), ...
-        -- But extract reads: l4_src_port=extract16(word7, 0), l4_dst_port=extract16(word7, 2)
-        -- This would give SrcPort = bytes 0-1 of word 7, DstPort = bytes 2-3.
-        -- So the extract module has a 2-byte offset error for IPv6 L4 ports.
-        -- Let me just put the ports where extract expects them (word 7 bytes 0-3)
-        -- for the test to match current behavior.
+        -- Word 7: L4 DstPort at bytes 0-1, rest is TCP header/payload
+        -- Extract reads: l4_src_port=ipv6_l4_sport(saved from word 6)
+        --                l4_dst_port=extract16(word7, 0) = bytes 0-1
         send_block(clk, blk_d, blk_v, make_data(
-            x"00", x"00", x"00", x"00", x"50", x"00", x"90", x"1F"));
+            x"00", x"00", x"00", x"00", x"00", x"00", x"50", x"00"));
         -- More payload + EOF
         send_block(clk, blk_d, blk_v, make_data(
             x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00"));
@@ -746,9 +723,49 @@ begin
                 report "  [IPv4] test=" & integer'image(test_num) &
                        " latency=" & integer'image(cycle_count - sof_cycle) & " clk" &
                        " proto=" & to_hstring(ipv4_proto) &
+                       " totlen=" & to_hstring(ipv4_totlen) &
                        " src=" & to_hstring(ipv4_src) &
                        " dst=" & to_hstring(ipv4_dst)
                     severity note;
+                -- Self-check for VLAN tests: proto must be TCP(06), totlen=0028
+                if test_num = 5 or test_num = 6 then
+                    assert ipv4_proto = x"06"
+                        report "TEST " & integer'image(test_num) &
+                               " FAIL: ipv4_proto expected=06 got=" & to_hstring(ipv4_proto)
+                        severity error;
+                    assert ipv4_totlen = x"0028"
+                        report "TEST " & integer'image(test_num) &
+                               " FAIL: ipv4_totlen expected=0028 got=" & to_hstring(ipv4_totlen)
+                        severity error;
+                end if;
+            end if;
+
+            if ipv6_v = '1' then
+                report "  [IPv6] test=" & integer'image(test_num) &
+                       " latency=" & integer'image(cycle_count - sof_cycle) & " clk" &
+                       " nhdr=" & to_hstring(ipv6_nhdr) &
+                       " plen=" & to_hstring(ipv6_plen) &
+                       " src=" & to_hstring(ipv6_src) &
+                       " dst=" & to_hstring(ipv6_dst)
+                    severity note;
+                -- Self-check for TEST 7: IPv6/TCP SOF1
+                if test_num = 7 then
+                    assert ipv6_nhdr = x"06"
+                        report "TEST 7 FAIL: ipv6_nhdr expected=06 got=" & to_hstring(ipv6_nhdr)
+                        severity error;
+                    assert ipv6_plen = x"0014"
+                        report "TEST 7 FAIL: ipv6_plen expected=0014 got=" & to_hstring(ipv6_plen)
+                        severity error;
+                    assert ipv6_src = x"20010DB8000100000000000000000001"
+                        report "TEST 7 FAIL: ipv6_src expected=20010DB8000100000000000000000001 got=" & to_hstring(ipv6_src)
+                        severity error;
+                    assert ipv6_dst = x"20010DB8000200000000000000000002"
+                        report "TEST 7 FAIL: ipv6_dst expected=20010DB8000200000000000000000002 got=" & to_hstring(ipv6_dst)
+                        severity error;
+                    assert is_ipv6 = '1'
+                        report "TEST 7 FAIL: is_ipv6 expected=1"
+                        severity error;
+                end if;
             end if;
 
             if l4_ports_v = '1' then
@@ -759,6 +776,25 @@ begin
                        " sport=" & to_hstring(l4_src_port) &
                        " dport=" & to_hstring(l4_dst_port)
                     severity note;
+                -- Self-check for VLAN tests: TCP must be detected
+                if test_num = 5 or test_num = 6 then
+                    assert is_tcp = '1'
+                        report "TEST " & integer'image(test_num) &
+                               " FAIL: is_tcp expected=1 got=0"
+                        severity error;
+                end if;
+                -- Self-check for TEST 7: IPv6 L4 ports
+                if test_num = 7 then
+                    assert l4_src_port = x"1F90"
+                        report "TEST 7 FAIL: l4_src_port expected=1F90 got=" & to_hstring(l4_src_port)
+                        severity error;
+                    assert l4_dst_port = x"0050"
+                        report "TEST 7 FAIL: l4_dst_port expected=0050 got=" & to_hstring(l4_dst_port)
+                        severity error;
+                    assert is_tcp = '1'
+                        report "TEST 7 FAIL: is_tcp expected=1"
+                        severity error;
+                end if;
             end if;
 
             if eof_v = '1' then
