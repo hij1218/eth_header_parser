@@ -13,24 +13,21 @@ Ultra-low-latency Ethernet header parser for 10GBASE-R. Parses 66-bit descramble
 ```
 blk_d[65:0] + blk_v (312.5 MHz, descrambled 66-bit blocks)
        │
-       ▼
-┌──────────────────────────┐
-│ eth_hdr_realign          │  SOF1/SOF2/SOF3 detection + barrel shift
-│ aligned_d: COMBINATIONAL │  No register on output (eth_64b66b pattern)
-│ Latency: 0 extra clk     │  Pure bit selection + concatenation = wire
-└──────────┬───────────────┘
-           │ aligned_d[63:0] (comb), aligned_v (comb)
-           ▼
-┌──────────────────────────┐
-│ eth_hdr_extract          │  Word counter FSM + per-field valid
-│ Parallel VLAN decode     │  0/1/2 VLAN tags without extra latency
-│ IPv4 / IPv6 branches     │  TCP/UDP port extraction
-└──────────┬───────────────┘
-           │ mac_dst_v, ethertype_v, ipv4_v, l4_ports_v ...
-           ▼
-┌──────────────────────────┐
-│ eth_hdr_parser_top       │  Top-level wrapper
-└──────────────────────────┘
+       ├──────────────────────────────────────────────┐
+       ▼                                              ▼
+┌──────────────────────────┐            ┌──────────────────────────┐
+│ eth_hdr_realign          │            │ eth_fcs_bridge           │
+│ aligned_d: COMBINATIONAL │            │ 66-bit → din/din_v       │
+│ Latency: 0 extra clk     │            │ for CRC-32 checker       │
+└──────────┬───────────────┘            └──────────┬───────────────┘
+           │ aligned_d, aligned_v                  │ din[63:0], din_v[7:0]
+           ├──────────────┐                        ▼
+           ▼              ▼              ┌──────────────────────────┐
+┌────────────────┐ ┌──────────────┐     │ eth_fcs (CRC-32)         │
+│ eth_hdr_extract│ │ eth_l2_check │     │ Slice-by-8, 6-stage pipe │
+│ Word counter   │ │ MAC filter + │     │ good_fcs / bad_fcs       │
+│ Per-field valid│ │ frame length │     └──────────────────────────┘
+└────────────────┘ └──────────────┘
 ```
 
 ## Latency (measured, all tests PASS)
@@ -161,10 +158,58 @@ Patterns extracted from fibres_proj_v2 (E-band 10G backhaul):
 - `eth_64b66b.vhd` L90-93: combinational output pattern — `xgmii_rxd <= dec_data` with 1-clk registered output, no intermediate pipeline
 - `eth_rxfifo.vhd` L206-209: SOF1/SOF2/SOF3 detection from sync code + block type
 
+## Current Progress (2026-04-04)
+
+### Completed This Session
+
+1. **SOF2/SOF3 distinct test vectors** — Tests 2 and 3 now use unique MAC/IP/port data (DEADBEEF0001 for SOF2, 001122334455 for SOF3) for clear waveform identification. All SOF types verified correct with expected latency.
+
+2. **L2 check module** (`eth_l2_check.vhd`) — MAC address filtering (station MAC + broadcast accept), frame length validation (runt <64B, jumbo >max), per-frame `l2_good`/`l2_bad` verdicts.
+
+3. **FCS CRC-32 check** (`eth_fcs_bridge.vhd` + `eth_fcs.vhd`) — Adapted slice-by-8 CRC-32 from fibres_proj_v2. Bridge converts 66-bit blocks to din/din_v for CRC module. Runs on parallel path (no impact on parsing latency). Verified: test 11 good FCS → `fcs_good=1`, test 12 corrupted FCS → `fcs_bad=1`.
+
+4. **Vivado implementation** — 1110 LUT, 952 FF, 0 BRAM, 0 DSP. Timing MET: WNS +0.229 ns @ 312.5 MHz (OOC mode, xcvu11p). Reports in `impl_out/`.
+
+5. **UVM testbench** (16 files in `uvm_test/`) — Full UVM environment with constrained-random stimulus, self-checking scoreboard, functional coverage. Compile+elaborate 0 errors.
+
+### UVM Test Results
+
+| Test | Result | Scoreboard |
+|------|--------|------------|
+| `eth_basic_ipv4_tcp_test` | PASS | 1 match, 0 mismatch |
+| `eth_basic_ipv4_udp_test` | PASS | 1 match, 0 mismatch |
+| `eth_good_fcs_test` | PASS | 1 match, 0 mismatch |
+| `eth_back_to_back_test` | PASS | 5 matches, 0 mismatches |
+| `eth_bad_fcs_test` | BLOCKED | XSIM 2022.2 randomize hang on constraint override |
+| `eth_mac_mismatch_test` | BLOCKED | Same XSIM randomize issue |
+
+### Known Issues
+
+- **XSIM constrained randomization** — XSIM 2022.2 hangs when inline `randomize() with {}` overrides soft constraints in certain patterns (inject_fcs_error, non-default MAC). Fix: set fields procedurally after randomize, or use Questa/VCS.
+- **SOF2/SOF3 UVM driver** — Barrel-shift encoding implemented but not yet validated in UVM (works in VHDL testbench).
+- **ARP/non-IP UVM test** — Hangs on XSIM randomize with `is_ipv4==0` constraint override.
+
+### Implementation Resources
+
+| Module | LUT | FF | Notes |
+|--------|-----|-----|-------|
+| realign_inst | 138 | 41 | SOF detect + barrel shift |
+| extract_inst | 55 | 550 | Header field extraction |
+| l2_check_inst | 26 | 38 | MAC filter + frame length |
+| fcs_bridge_inst | 169 | 76 | Block → din/din_v |
+| fcs_inst | 725 | 247 | CRC-32 (8 ROM tables as SRLs) |
+| **Total** | **1110** | **952** | WNS +0.229 ns @ 312.5 MHz |
+
+### Git
+
+Pushed to https://github.com/hij1218/eth_header_parser (private).
+
 ## Next Steps
 
-- [ ] Add VLAN-tagged test vectors (tests 5-8 from original plan)
+- [ ] Fix UVM XSIM randomize hangs (procedural field setting instead of constraint override)
+- [ ] Validate SOF2/SOF3 barrel-shift encoding in UVM driver
+- [ ] Add VLAN-tagged test vectors (UVM sequences exist, need constraint debug)
 - [ ] Add IPv6 test vectors
-- [ ] Add runt frame / parse_error test
-- [ ] Vivado synthesis timing report at 312.5 MHz
+- [ ] Add runt frame / jumbo frame / parse_error tests
+- [ ] Run UVM random stress test (50+ frames)
 - [ ] Integration with order book / matching engine downstream

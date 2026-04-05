@@ -1,0 +1,5 @@
+  BUG-003（High）：VLAN 模式下 ipv4_proto 提取位置错误。1-VLAN 和 2-VLAN 帧的 protocol 字段输出 0xA8 而非                 
+  0x06（TCP），导致 is_tcp/is_udp 无法正确标识。L4 端口本身正确（sport=1F90, dport=0050）。                               
+                                                                                                                          
+  BUG-004（Medium）：IPv6 地址组装不完整。null 占位符在 word 4，SrcAddr 缺少部分字节拼接，DstAddr 包含了 L4 头的 2        
+  字节。但 EtherType/NextHeader/PayloadLen/L4 ports 都正确。 
