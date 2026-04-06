@@ -50,7 +50,15 @@ blk_d[65:0] + blk_v (descrambled 66-bit blocks)
 +--------------------------------------------------------------------------+
 ```
 
-> See [`eth_header_parser/docs/architecture.drawio`](eth_header_parser/docs/architecture.drawio) for the system diagram, [`eth_hdr_realign.drawio`](eth_header_parser/docs/eth_hdr_realign.drawio) for the realign FSM + barrel shift, and [`eth_hdr_extract.drawio`](eth_header_parser/docs/eth_hdr_extract.drawio) for the per-word extraction pipeline.
+> Draw.io source files: [`architecture.drawio`](eth_header_parser/docs/architecture.drawio), [`eth_hdr_realign.drawio`](eth_header_parser/docs/eth_hdr_realign.drawio), [`eth_hdr_extract.drawio`](eth_header_parser/docs/eth_hdr_extract.drawio)
+
+### eth_hdr_realign — SOF Detection & Barrel Shift
+
+![eth_hdr_realign](eth_header_parser/docs/eth_hdr_realign.svg)
+
+### eth_hdr_extract — Per-Word Header Extraction Pipeline
+
+![eth_hdr_extract](eth_header_parser/docs/eth_hdr_extract.svg)
 
 ### Data Flow
 

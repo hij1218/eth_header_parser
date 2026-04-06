@@ -1,0 +1,255 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1000" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <filter id="shadow" x="-4%" y="-4%" width="108%" height="108%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <!-- Title bar -->
+  <rect x="0" y="0" width="1400" height="42" rx="0" fill="#1a1a2e"/>
+  <text x="700" y="27" text-anchor="middle" fill="white" font-size="16" font-weight="bold">eth_hdr_extract  —  Per-Word Header Field Extraction Pipeline</text>
+
+  <!-- Input label -->
+  <text x="700" y="65" text-anchor="middle" font-size="11" fill="#0066CC" font-weight="bold">aligned_d[63:0] + aligned_v  (from eth_hdr_realign)  →  word_cnt increments on each aligned_v</text>
+
+  <!-- ===== WORD COLUMNS ===== -->
+
+  <!-- Word 0 -->
+  <rect x="20" y="85" width="165" height="25" rx="4" fill="#e0e0e0" stroke="#999"/>
+  <text x="102" y="102" text-anchor="middle" font-size="12" font-weight="bold" fill="#333">Word 0</text>
+  <rect x="20" y="115" width="165" height="160" rx="6" fill="white" stroke="#ddd" filter="url(#shadow)"/>
+  <rect x="28" y="122" width="149" height="32" rx="3" fill="#f8cecc" stroke="#b85450"/>
+  <text x="102" y="136" text-anchor="middle" font-size="9" fill="#b85450" font-weight="bold">b0-b5: DMAC [47:0]</text>
+  <text x="102" y="148" text-anchor="middle" font-size="8" fill="#999">6 bytes, network order</text>
+  <rect x="28" y="160" width="149" height="28" rx="3" fill="#dae8fc" stroke="#6c8ebf"/>
+  <text x="102" y="178" text-anchor="middle" font-size="9" fill="#6c8ebf">b6-b7: SMAC[15:0] → save</text>
+  <rect x="28" y="198" width="149" height="26" rx="3" fill="#d5e8d4" stroke="#82b366"/>
+  <text x="102" y="215" text-anchor="middle" font-size="10" fill="#009900" font-weight="bold">mac_dst_v = 1</text>
+  <rect x="35" y="234" width="135" height="28" rx="12" fill="#FFF3E0" stroke="#E65100"/>
+  <text x="102" y="252" text-anchor="middle" font-size="10" fill="#E65100" font-weight="bold">T+1</text>
+
+  <!-- Word 1 -->
+  <rect x="195" y="85" width="195" height="25" rx="4" fill="#e0e0e0" stroke="#999"/>
+  <text x="292" y="102" text-anchor="middle" font-size="12" font-weight="bold" fill="#333">Word 1</text>
+  <rect x="195" y="115" width="195" height="270" rx="6" fill="white" stroke="#ddd" filter="url(#shadow)"/>
+  <rect x="203" y="122" width="179" height="28" rx="3" fill="#dae8fc" stroke="#6c8ebf"/>
+  <text x="292" y="140" text-anchor="middle" font-size="9" fill="#6c8ebf">b0-b3: SMAC[47:16] + smac_lo</text>
+  <rect x="203" y="155" width="179" height="24" rx="3" fill="#e1d5e7" stroke="#9673a6"/>
+  <text x="292" y="171" text-anchor="middle" font-size="9" fill="#9673a6">b4-b5: raw EtherType</text>
+
+  <!-- Branch label -->
+  <text x="210" y="196" font-size="9" fill="#666" font-weight="bold">VLAN branch:</text>
+
+  <!-- No VLAN path -->
+  <rect x="203" y="204" width="179" height="48" rx="3" fill="#d5e8d4" stroke="#82b366"/>
+  <text x="292" y="218" text-anchor="middle" font-size="8" fill="#009900" font-weight="bold">Not 0x8100/0x88A8:</text>
+  <text x="292" y="230" text-anchor="middle" font-size="8" fill="#009900">ethertype_v=1, IPv4/6 detect</text>
+  <text x="292" y="242" text-anchor="middle" font-size="8" fill="#009900">b6-b7: IHL + DSCP (if IPv4)</text>
+
+  <!-- VLAN path -->
+  <rect x="203" y="258" width="179" height="40" rx="3" fill="#e1d5e7" stroke="#9673a6"/>
+  <text x="292" y="272" text-anchor="middle" font-size="8" fill="#9673a6" font-weight="bold">0x8100 or 0x88A8:</text>
+  <text x="292" y="284" text-anchor="middle" font-size="8" fill="#9673a6">vlan1_tci ← b6-b7, defer etype</text>
+
+  <rect x="203" y="306" width="179" height="26" rx="3" fill="#d5e8d4" stroke="#82b366"/>
+  <text x="292" y="323" text-anchor="middle" font-size="10" fill="#009900" font-weight="bold">mac_src_v = 1</text>
+  <rect x="215" y="344" width="155" height="28" rx="12" fill="#FFF3E0" stroke="#E65100"/>
+  <text x="292" y="362" text-anchor="middle" font-size="10" fill="#E65100" font-weight="bold">T+2</text>
+
+  <!-- Word 2 -->
+  <rect x="400" y="85" width="165" height="25" rx="4" fill="#e0e0e0" stroke="#999"/>
+  <text x="482" y="102" text-anchor="middle" font-size="12" font-weight="bold" fill="#333">Word 2</text>
+  <rect x="400" y="115" width="165" height="210" rx="6" fill="white" stroke="#ddd" filter="url(#shadow)"/>
+  <rect x="408" y="122" width="149" height="55" rx="3" fill="#e1d5e7" stroke="#9673a6"/>
+  <text x="482" y="136" text-anchor="middle" font-size="8" fill="#9673a6" font-weight="bold">1 VLAN path:</text>
+  <text x="482" y="148" text-anchor="middle" font-size="8" fill="#9673a6">b0-b1: real EtherType</text>
+  <text x="482" y="160" text-anchor="middle" font-size="8" fill="#009900" font-weight="bold">→ ethertype_v=1</text>
+  <text x="482" y="172" text-anchor="middle" font-size="8" fill="#9673a6">vlan_count="01"</text>
+
+  <rect x="408" y="182" width="149" height="40" rx="3" fill="#FCE4EC" stroke="#C62828"/>
+  <text x="482" y="196" text-anchor="middle" font-size="8" fill="#C62828" font-weight="bold">If inner = 0x8100 (QinQ):</text>
+  <text x="482" y="208" text-anchor="middle" font-size="8" fill="#C62828">vlan2_tci ← b2-b3</text>
+  <text x="482" y="218" text-anchor="middle" font-size="8" fill="#C62828">vlan_state → "10"</text>
+
+  <rect x="408" y="228" width="149" height="35" rx="3" fill="#FFF9E6" stroke="#CCCC99"/>
+  <text x="482" y="242" text-anchor="middle" font-size="8" fill="#666">No VLAN: IPv4 totlen,</text>
+  <text x="482" y="254" text-anchor="middle" font-size="8" fill="#666">proto; IPv6 plen, nhdr</text>
+
+  <rect x="415" y="275" width="135" height="28" rx="12" fill="#FFF3E0" stroke="#E65100"/>
+  <text x="482" y="293" text-anchor="middle" font-size="9" fill="#E65100" font-weight="bold">T+3 (1 VLAN)</text>
+
+  <!-- Word 3 -->
+  <rect x="575" y="85" width="165" height="25" rx="4" fill="#e0e0e0" stroke="#999"/>
+  <text x="657" y="102" text-anchor="middle" font-size="12" font-weight="bold" fill="#333">Word 3</text>
+  <rect x="575" y="115" width="165" height="195" rx="6" fill="white" stroke="#ddd" filter="url(#shadow)"/>
+  <rect x="583" y="122" width="149" height="44" rx="3" fill="#FCE4EC" stroke="#C62828"/>
+  <text x="657" y="136" text-anchor="middle" font-size="8" fill="#C62828" font-weight="bold">2 VLAN (QinQ) path:</text>
+  <text x="657" y="148" text-anchor="middle" font-size="8" fill="#C62828">b0-b1: real EtherType</text>
+  <text x="657" y="160" text-anchor="middle" font-size="8" fill="#009900" font-weight="bold">→ ethertype_v=1, count="10"</text>
+
+  <rect x="583" y="172" width="149" height="28" rx="3" fill="#FFF9E6" stroke="#CCCC99"/>
+  <text x="657" y="186" text-anchor="middle" font-size="8" fill="#666">1V: IPv4 proto / IPv6 setup</text>
+  <text x="657" y="196" text-anchor="middle" font-size="8" fill="#666">0V: IPv4 src_ip, dst_hi</text>
+
+  <rect x="583" y="210" width="149" height="28" rx="3" fill="#FFF9E6" stroke="#CCCC99"/>
+  <text x="657" y="224" text-anchor="middle" font-size="8" fill="#666">0V IPv6: src_mid [63:0]</text>
+  <text x="657" y="234" text-anchor="middle" font-size="8" fill="#666">(full 8-byte word)</text>
+
+  <rect x="590" y="250" width="135" height="28" rx="12" fill="#FFF3E0" stroke="#E65100"/>
+  <text x="657" y="268" text-anchor="middle" font-size="9" fill="#E65100" font-weight="bold">T+4 (2 VLAN)</text>
+
+  <!-- Word 4 -->
+  <rect x="750" y="85" width="175" height="25" rx="4" fill="#e0e0e0" stroke="#999"/>
+  <text x="837" y="102" text-anchor="middle" font-size="12" font-weight="bold" fill="#333">Word 4</text>
+  <rect x="750" y="115" width="175" height="210" rx="6" fill="white" stroke="#ddd" filter="url(#shadow)"/>
+  <rect x="758" y="122" width="159" height="75" rx="3" fill="#d5e8d4" stroke="#82b366" stroke-width="2"/>
+  <text x="837" y="136" text-anchor="middle" font-size="9" fill="#009900" font-weight="bold">No VLAN + IPv4:</text>
+  <text x="837" y="150" text-anchor="middle" font-size="8" fill="#009900">b0-b1: dst_ip (+ dst_hi)</text>
+  <text x="837" y="162" text-anchor="middle" font-size="8" fill="#009900">b2-b3: L4 src port</text>
+  <text x="837" y="174" text-anchor="middle" font-size="8" fill="#009900">b4-b5: L4 dst port</text>
+  <text x="837" y="190" text-anchor="middle" font-size="10" fill="#009900" font-weight="bold">ipv4_v=1, l4_ports_v=1</text>
+
+  <rect x="758" y="204" width="159" height="28" rx="3" fill="#FFF9E6" stroke="#CCCC99"/>
+  <text x="837" y="218" text-anchor="middle" font-size="8" fill="#666">0V IPv6: src_tail, dst_b01</text>
+  <text x="837" y="228" text-anchor="middle" font-size="8" fill="#666">1V IPv4: src_ip, dst_hi</text>
+
+  <rect x="758" y="240" width="159" height="26" rx="3" fill="#FFF9E6" stroke="#CCCC99"/>
+  <text x="837" y="257" text-anchor="middle" font-size="8" fill="#666">2V: IPv4 proto / IPv6 setup</text>
+
+  <rect x="770" y="280" width="143" height="28" rx="12" fill="#FFF3E0" stroke="#E65100"/>
+  <text x="837" y="298" text-anchor="middle" font-size="9" fill="#E65100" font-weight="bold">T+5 (0V IPv4)</text>
+
+  <!-- Word 5 -->
+  <rect x="935" y="85" width="135" height="25" rx="4" fill="#e0e0e0" stroke="#999"/>
+  <text x="1002" y="102" text-anchor="middle" font-size="12" font-weight="bold" fill="#333">Word 5</text>
+  <rect x="935" y="115" width="135" height="195" rx="6" fill="white" stroke="#ddd" filter="url(#shadow)"/>
+  <rect x="943" y="122" width="119" height="55" rx="3" fill="#d5e8d4" stroke="#82b366" stroke-width="2"/>
+  <text x="1002" y="136" text-anchor="middle" font-size="8" fill="#009900" font-weight="bold">1V + IPv4:</text>
+  <text x="1002" y="148" text-anchor="middle" font-size="8" fill="#009900">dst_ip + L4 ports</text>
+  <text x="1002" y="162" text-anchor="middle" font-size="8" fill="#009900" font-weight="bold">ipv4_v=1</text>
+  <text x="1002" y="172" text-anchor="middle" font-size="8" fill="#009900" font-weight="bold">l4_ports_v=1</text>
+
+  <rect x="943" y="182" width="119" height="28" rx="3" fill="#FFF9E6" stroke="#CCCC99"/>
+  <text x="1002" y="200" text-anchor="middle" font-size="8" fill="#666">0V IPv6: dst_mid</text>
+
+  <rect x="943" y="216" width="119" height="28" rx="3" fill="#FFF9E6" stroke="#CCCC99"/>
+  <text x="1002" y="234" text-anchor="middle" font-size="8" fill="#666">2V: src_ip, dst_hi</text>
+
+  <rect x="948" y="258" width="108" height="28" rx="12" fill="#FFF3E0" stroke="#E65100"/>
+  <text x="1002" y="276" text-anchor="middle" font-size="9" fill="#E65100" font-weight="bold">T+6 (1V)</text>
+
+  <!-- Word 6-7 -->
+  <rect x="1080" y="85" width="175" height="25" rx="4" fill="#e0e0e0" stroke="#999"/>
+  <text x="1167" y="102" text-anchor="middle" font-size="12" font-weight="bold" fill="#333">Word 6 - 7</text>
+  <rect x="1080" y="115" width="175" height="235" rx="6" fill="white" stroke="#ddd" filter="url(#shadow)"/>
+  <rect x="1088" y="122" width="159" height="42" rx="3" fill="#d5e8d4" stroke="#82b366" stroke-width="2"/>
+  <text x="1167" y="136" text-anchor="middle" font-size="8" fill="#009900" font-weight="bold">W6: 2V + IPv4:</text>
+  <text x="1167" y="148" text-anchor="middle" font-size="8" fill="#009900">dst_ip + L4 ports</text>
+  <text x="1167" y="158" text-anchor="middle" font-size="8" fill="#009900" font-weight="bold">ipv4_v=1, l4_ports_v=1</text>
+
+  <rect x="1088" y="170" width="159" height="50" rx="3" fill="#d5e8d4" stroke="#82b366" stroke-width="2"/>
+  <text x="1167" y="184" text-anchor="middle" font-size="8" fill="#009900" font-weight="bold">W6: 0V + IPv6:</text>
+  <text x="1167" y="196" text-anchor="middle" font-size="8" fill="#009900">Assemble 128-bit src+dst</text>
+  <text x="1167" y="208" text-anchor="middle" font-size="8" fill="#009900" font-weight="bold">ipv6_v=1</text>
+  <text x="1167" y="216" text-anchor="middle" font-size="8" fill="#009900">save l4_sport from b6-b7</text>
+
+  <rect x="1088" y="226" width="159" height="38" rx="3" fill="#d5e8d4" stroke="#82b366" stroke-width="2"/>
+  <text x="1167" y="240" text-anchor="middle" font-size="8" fill="#009900" font-weight="bold">W7: 0V + IPv6:</text>
+  <text x="1167" y="252" text-anchor="middle" font-size="8" fill="#009900">l4_dport from b0-b1</text>
+  <text x="1167" y="260" text-anchor="middle" font-size="8" fill="#009900" font-weight="bold">l4_ports_v=1</text>
+
+  <rect x="1095" y="280" width="143" height="52" rx="12" fill="#FFF3E0" stroke="#E65100"/>
+  <text x="1167" y="300" text-anchor="middle" font-size="9" fill="#E65100" font-weight="bold">T+7 (2V IPv4)</text>
+  <text x="1167" y="318" text-anchor="middle" font-size="9" fill="#E65100" font-weight="bold">T+8 (0V IPv6)</text>
+
+  <!-- ===== VLAN BRANCHING ===== -->
+  <rect x="20" y="400" width="900" height="290" rx="8" fill="#fafafa" stroke="#ddd" filter="url(#shadow)"/>
+  <text x="40" y="426" font-size="14" font-weight="bold" fill="#333">VLAN Detection &amp; EtherType Resolution</text>
+
+  <!-- Ethernet header byte layout -->
+  <rect x="40" y="442" width="120" height="32" rx="2" fill="#f8cecc" stroke="#b85450"/>
+  <text x="100" y="462" text-anchor="middle" font-size="10" font-weight="bold" fill="#b85450">DMAC (6B)</text>
+  <rect x="160" y="442" width="120" height="32" rx="2" fill="#dae8fc" stroke="#6c8ebf"/>
+  <text x="220" y="462" text-anchor="middle" font-size="10" font-weight="bold" fill="#6c8ebf">SMAC (6B)</text>
+  <rect x="280" y="442" width="60" height="32" rx="2" fill="#e1d5e7" stroke="#9673a6"/>
+  <text x="310" y="462" text-anchor="middle" font-size="9" font-weight="bold" fill="#9673a6">EType</text>
+  <rect x="340" y="442" width="560" height="32" rx="2" fill="#f5f5f5" stroke="#ccc"/>
+  <text x="620" y="462" text-anchor="middle" font-size="10" fill="#999">... payload ...</text>
+
+  <!-- Path A: No VLAN -->
+  <rect x="40" y="490" width="275" height="185" rx="6" fill="#d5e8d4" stroke="#82b366" stroke-width="2" filter="url(#shadow)"/>
+  <text x="55" y="512" font-size="12" font-weight="bold" fill="#333">Path A: No VLAN</text>
+  <text x="55" y="528" font-size="9" fill="#666">EType != 0x8100, != 0x88A8</text>
+  <rect x="50" y="538" width="255" height="22" rx="2" fill="#E8F5E9" stroke="#82b366"/>
+  <text x="55" y="553" font-size="9" fill="#333">Word 1: ethertype_v = 1</text>
+  <rect x="50" y="564" width="255" height="22" rx="2" fill="#E8F5E9" stroke="#82b366"/>
+  <text x="55" y="579" font-size="9" fill="#333">Word 4 (IPv4): ipv4_v, l4_ports_v = 1</text>
+  <rect x="50" y="590" width="255" height="22" rx="2" fill="#E8F5E9" stroke="#82b366"/>
+  <text x="55" y="605" font-size="9" fill="#333">Word 6-7 (IPv6): ipv6_v, l4_ports_v = 1</text>
+  <rect x="60" y="622" width="245" height="40" rx="12" fill="#FFF3E0" stroke="#E65100"/>
+  <text x="182" y="639" text-anchor="middle" font-size="10" fill="#E65100">IPv4 L4: <tspan font-weight="bold">T+5</tspan>  |  IPv6 L4: <tspan font-weight="bold">T+8</tspan></text>
+  <text x="182" y="655" text-anchor="middle" font-size="9" fill="#E65100">vlan_count = "00"</text>
+
+  <!-- Path B: 1 VLAN -->
+  <rect x="325" y="490" width="280" height="185" rx="6" fill="#e1d5e7" stroke="#9673a6" stroke-width="2" filter="url(#shadow)"/>
+  <text x="340" y="512" font-size="12" font-weight="bold" fill="#333">Path B: 1 VLAN (802.1Q)</text>
+  <text x="340" y="528" font-size="9" fill="#666">EType = 0x8100</text>
+  <rect x="335" y="538" width="260" height="22" rx="2" fill="#F3E5F5" stroke="#9673a6"/>
+  <text x="340" y="553" font-size="9" fill="#333">Word 1: save vlan1_tci</text>
+  <rect x="335" y="564" width="260" height="22" rx="2" fill="#F3E5F5" stroke="#9673a6"/>
+  <text x="340" y="579" font-size="9" fill="#333">Word 2: ethertype_v = 1  (+1 clk)</text>
+  <rect x="335" y="590" width="260" height="22" rx="2" fill="#F3E5F5" stroke="#9673a6"/>
+  <text x="340" y="605" font-size="9" fill="#333">Word 5 (IPv4): ipv4_v, l4_ports_v = 1</text>
+  <rect x="345" y="622" width="245" height="40" rx="12" fill="#FFF3E0" stroke="#E65100"/>
+  <text x="467" y="639" text-anchor="middle" font-size="10" fill="#E65100">IPv4 L4: <tspan font-weight="bold">T+6</tspan>  (+1 vs no VLAN)</text>
+  <text x="467" y="655" text-anchor="middle" font-size="9" fill="#E65100">vlan_count = "01"</text>
+
+  <!-- Path C: 2 VLAN -->
+  <rect x="615" y="490" width="295" height="185" rx="6" fill="#FCE4EC" stroke="#C62828" stroke-width="2" filter="url(#shadow)"/>
+  <text x="630" y="512" font-size="12" font-weight="bold" fill="#333">Path C: 2 VLAN QinQ (802.1ad)</text>
+  <text x="630" y="528" font-size="9" fill="#666">EType = 0x88A8, inner = 0x8100</text>
+  <rect x="625" y="538" width="275" height="22" rx="2" fill="#FFEBEE" stroke="#C62828"/>
+  <text x="630" y="553" font-size="9" fill="#333">Word 1: save vlan1_tci (S-tag)</text>
+  <rect x="625" y="564" width="275" height="22" rx="2" fill="#FFEBEE" stroke="#C62828"/>
+  <text x="630" y="579" font-size="9" fill="#333">Word 2: save vlan2_tci (C-tag)</text>
+  <rect x="625" y="590" width="275" height="22" rx="2" fill="#FFEBEE" stroke="#C62828"/>
+  <text x="630" y="605" font-size="9" fill="#333">Word 3: ethertype_v = 1  (+2 clk)</text>
+  <rect x="635" y="622" width="255" height="40" rx="12" fill="#FFF3E0" stroke="#E65100"/>
+  <text x="762" y="639" text-anchor="middle" font-size="10" fill="#E65100">IPv4 L4: <tspan font-weight="bold">T+7</tspan>  (+2 vs no VLAN)</text>
+  <text x="762" y="655" text-anchor="middle" font-size="9" fill="#E65100">vlan_count = "10"</text>
+
+  <!-- IPv6 Assembly note -->
+  <rect x="940" y="400" width="440" height="216" rx="6" fill="#FFF9E6" stroke="#CCCC99" filter="url(#shadow)"/>
+  <text x="960" y="424" font-size="13" font-weight="bold" fill="#333">IPv6 Address Assembly (128-bit)</text>
+  <text x="960" y="440" font-size="9" fill="#666">No VLAN path only. Each part buffered across words.</text>
+  <line x1="955" y1="446" x2="1365" y2="446" stroke="#CCCC99"/>
+  <text x="960" y="466" font-size="10" fill="#333" font-family="Courier New, monospace">Word 2: src_b01   [15:0]   b6-b7</text>
+  <text x="960" y="484" font-size="10" fill="#333" font-family="Courier New, monospace">Word 3: src_mid   [63:0]   b0-b7</text>
+  <text x="960" y="502" font-size="10" fill="#333" font-family="Courier New, monospace">Word 4: src_tail  [47:0]   b0-b5</text>
+  <text x="960" y="520" font-size="10" fill="#333" font-family="Courier New, monospace">        dst_b01   [15:0]   b6-b7</text>
+  <text x="960" y="538" font-size="10" fill="#333" font-family="Courier New, monospace">Word 5: dst_mid   [63:0]   b0-b7</text>
+  <text x="960" y="556" font-size="10" fill="#333" font-family="Courier New, monospace">Word 6: dst_tail  [47:0]   b0-b5</text>
+  <text x="960" y="574" font-size="10" fill="#333" font-family="Courier New, monospace">        l4_sport  [15:0]   b6-b7</text>
+  <text x="960" y="592" font-size="10" fill="#333" font-family="Courier New, monospace">Word 7: l4_dport  [15:0]   b0-b1</text>
+  <line x1="955" y1="600" x2="1365" y2="600" stroke="#CCCC99"/>
+  <text x="960" y="614" font-size="9" fill="#666">src = b01(16) &amp; mid(64) &amp; tail(48) = 128b</text>
+
+  <!-- Summary table -->
+  <rect x="940" y="630" width="440" height="170" rx="6" fill="#fafafa" stroke="#ddd" filter="url(#shadow)"/>
+  <text x="960" y="654" font-size="13" font-weight="bold" fill="#333">Valid Pulse Summary (word_cnt trigger)</text>
+  <line x1="955" y1="660" x2="1365" y2="660" stroke="#ddd"/>
+  <text x="960" y="680" font-size="10" fill="#666" font-weight="bold" font-family="Courier New, monospace">Signal        0V    1V    2V</text>
+  <line x1="955" y1="685" x2="1365" y2="685" stroke="#eee"/>
+  <text x="960" y="700" font-size="10" fill="#333" font-family="Courier New, monospace">mac_dst_v     W0    W0    W0</text>
+  <text x="960" y="716" font-size="10" fill="#333" font-family="Courier New, monospace">mac_src_v     W1    W1    W1</text>
+  <text x="960" y="732" font-size="10" fill="#333" font-family="Courier New, monospace">ethertype_v   W1    W2    W3</text>
+  <text x="960" y="748" font-size="10" fill="#333" font-family="Courier New, monospace">ipv4_v        W4    W5    W6</text>
+  <text x="960" y="764" font-size="10" fill="#333" font-family="Courier New, monospace">l4_ports_v    W4    W5    W6  (IPv4)</text>
+  <text x="960" y="780" font-size="10" fill="#333" font-family="Courier New, monospace">ipv6_v        W6    -     -</text>
+  <text x="960" y="796" font-size="10" fill="#333" font-family="Courier New, monospace">l4_ports_v    W7    -     -   (IPv6)</text>
+
+  <!-- Resource box -->
+  <rect x="940" y="820" width="440" height="40" rx="6" fill="#E8F5E9" stroke="#82b366" filter="url(#shadow)"/>
+  <text x="1160" y="845" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">55 LUT  /  550 FF  /  0 BRAM       (large FF count = header field registers)</text>
+
+</svg>

@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 720" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <filter id="shadow" x="-4%" y="-4%" width="108%" height="108%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-opacity="0.15"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#CC0000"/>
+    </marker>
+  </defs>
+
+  <!-- Title bar -->
+  <rect x="0" y="0" width="1100" height="42" rx="0" fill="#1a1a2e"/>
+  <text x="550" y="27" text-anchor="middle" fill="white" font-size="16" font-weight="bold">eth_hdr_realign  —  SOF Detection &amp; Barrel Shift FSM</text>
+
+  <!-- ===== FSM STATES ===== -->
+
+  <!-- IDLE_S -->
+  <ellipse cx="460" cy="110" rx="100" ry="52" fill="#f8cecc" stroke="#b85450" stroke-width="2" filter="url(#shadow)"/>
+  <text x="460" y="100" text-anchor="middle" font-size="13" font-weight="bold">IDLE_S</text>
+  <text x="460" y="118" text-anchor="middle" font-size="9" fill="#666">aligned_v = 0</text>
+  <text x="460" y="130" text-anchor="middle" font-size="9" fill="#666">frame_active = 0</text>
+
+  <!-- SOF1_DATA_S -->
+  <ellipse cx="170" cy="310" rx="120" ry="60" fill="#d5e8d4" stroke="#82b366" stroke-width="2" filter="url(#shadow)"/>
+  <text x="170" y="292" text-anchor="middle" font-size="13" font-weight="bold">SOF1_DATA_S</text>
+  <text x="170" y="310" text-anchor="middle" font-size="9" fill="#666">aligned_d = blk_d[65:2]</text>
+  <text x="170" y="324" text-anchor="middle" font-size="9" fill="#666">aligned_v = blk_v &amp; !ctrl</text>
+  <text x="170" y="338" text-anchor="middle" font-size="9" fill="#009900" font-weight="bold">Direct passthrough</text>
+
+  <!-- SOF2_PRE_S -->
+  <ellipse cx="730" cy="200" rx="110" ry="52" fill="#dae8fc" stroke="#6c8ebf" stroke-width="2" filter="url(#shadow)"/>
+  <text x="730" y="192" text-anchor="middle" font-size="13" font-weight="bold">SOF2_PRE_S</text>
+  <text x="730" y="210" text-anchor="middle" font-size="9" fill="#666">Save prev upper 32b</text>
+  <text x="730" y="224" text-anchor="middle" font-size="9" fill="#666">aligned_v = 0</text>
+
+  <!-- SOF2_DATA_S -->
+  <ellipse cx="730" cy="380" rx="130" ry="62" fill="#dae8fc" stroke="#6c8ebf" stroke-width="2" filter="url(#shadow)"/>
+  <text x="730" y="360" text-anchor="middle" font-size="13" font-weight="bold">SOF2_DATA_S</text>
+  <text x="730" y="378" text-anchor="middle" font-size="9" fill="#666">aligned_d = curr[33:2]</text>
+  <text x="730" y="392" text-anchor="middle" font-size="9" fill="#666">            &amp; prev[65:34]</text>
+  <text x="730" y="410" text-anchor="middle" font-size="9" fill="#0066CC" font-weight="bold">Barrel shift</text>
+
+  <!-- ===== TRANSITIONS ===== -->
+
+  <!-- IDLE -> SOF1 -->
+  <path d="M 380 140 C 300 200, 220 220, 200 252" fill="none" stroke="#009900" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <rect x="220" y="170" width="150" height="36" rx="4" fill="white" stroke="#009900" stroke-width="1"/>
+  <text x="295" y="184" text-anchor="middle" font-size="9" fill="#009900" font-weight="bold">SOF1 detected</text>
+  <text x="295" y="198" text-anchor="middle" font-size="9" fill="#009900">sof_v=1, type="01"</text>
+
+  <!-- IDLE -> SOF2_PRE -->
+  <path d="M 545 130 C 600 150, 660 160, 700 178" fill="none" stroke="#0066CC" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <rect x="540" y="128" width="170" height="36" rx="4" fill="white" stroke="#0066CC" stroke-width="1"/>
+  <text x="625" y="142" text-anchor="middle" font-size="9" fill="#0066CC" font-weight="bold">SOF2 or SOF3 detected</text>
+  <text x="625" y="156" text-anchor="middle" font-size="9" fill="#0066CC">sof_v=1, type="10"/"11"</text>
+
+  <!-- SOF2_PRE -> SOF2_DATA -->
+  <path d="M 730 252 L 730 318" fill="none" stroke="#0066CC" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="745" y="286" font-size="9" fill="#0066CC" font-weight="bold">blk_v=1</text>
+
+  <!-- SOF1 -> IDLE (EOF) -->
+  <path d="M 220 252 C 260 200, 320 110, 370 90" fill="none" stroke="#CC0000" stroke-width="2" marker-end="url(#arrow-red)"/>
+  <text x="250" y="150" font-size="9" fill="#CC0000" font-weight="bold">EOF → eof_v=1</text>
+
+  <!-- SOF2_DATA -> IDLE (EOF) -->
+  <path d="M 850 355 C 950 300, 950 150, 560 100" fill="none" stroke="#CC0000" stroke-width="2" marker-end="url(#arrow-red)"/>
+  <text x="870" y="240" font-size="9" fill="#CC0000" font-weight="bold">EOF</text>
+
+  <!-- SOF1 self-loop -->
+  <path d="M 80 280 C 30 280, 30 340, 80 340" fill="none" stroke="#009900" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrow)"/>
+  <text x="8" y="315" font-size="8" fill="#009900">back-to-back SOF1</text>
+
+  <!-- SOF2_DATA self to SOF2_PRE -->
+  <path d="M 855 360 C 900 330, 900 260, 840 222" fill="none" stroke="#0066CC" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrow)"/>
+  <text x="880" y="300" font-size="8" fill="#0066CC">SOF2/3</text>
+
+  <!-- ===== BARREL SHIFT DETAIL ===== -->
+  <rect x="30" y="470" width="680" height="240" rx="8" fill="#f9f9f9" stroke="#ccc" filter="url(#shadow)"/>
+  <text x="50" y="496" font-size="14" font-weight="bold" fill="#333">Barrel Shift Detail (SOF2 / SOF3)</text>
+
+  <!-- Previous block -->
+  <text x="50" y="524" font-size="10" fill="#666">Previous block (cycle N-1):</text>
+  <rect x="50" y="530" width="50" height="32" rx="2" fill="#ccc" stroke="#999"/>
+  <text x="75" y="550" text-anchor="middle" font-size="8" fill="#666">sync</text>
+  <rect x="100" y="530" width="240" height="32" rx="2" fill="#eee" stroke="#999"/>
+  <text x="220" y="550" text-anchor="middle" font-size="9" fill="#999">prev [33:2] — preamble (discarded)</text>
+  <rect x="340" y="530" width="280" height="32" rx="2" fill="#dae8fc" stroke="#6c8ebf" stroke-width="2"/>
+  <text x="480" y="546" text-anchor="middle" font-size="10" fill="#0066CC" font-weight="bold">prev [65:34]</text>
+  <text x="480" y="558" text-anchor="middle" font-size="8" fill="#6c8ebf">saved as blk_d_prev_upper</text>
+
+  <!-- Current block -->
+  <text x="50" y="586" font-size="10" fill="#666">Current block (cycle N):</text>
+  <rect x="50" y="592" width="50" height="32" rx="2" fill="#ccc" stroke="#999"/>
+  <text x="75" y="612" text-anchor="middle" font-size="8" fill="#666">sync</text>
+  <rect x="100" y="592" width="240" height="32" rx="2" fill="#d5e8d4" stroke="#82b366" stroke-width="2"/>
+  <text x="220" y="608" text-anchor="middle" font-size="10" fill="#009900" font-weight="bold">curr [33:2]</text>
+  <text x="220" y="620" text-anchor="middle" font-size="8" fill="#82b366">lower 32 bits</text>
+  <rect x="340" y="592" width="280" height="32" rx="2" fill="#dae8fc" stroke="#6c8ebf"/>
+  <text x="480" y="612" text-anchor="middle" font-size="9" fill="#666">curr [65:34] → next prev_upper</text>
+
+  <!-- Arrows down -->
+  <line x1="220" y1="624" x2="220" y2="650" stroke="#82b366" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <line x1="480" y1="562" x2="480" y2="650" stroke="#6c8ebf" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <!-- Result -->
+  <rect x="100" y="654" width="240" height="32" rx="4" fill="#d5e8d4" stroke="#82b366" stroke-width="2"/>
+  <text x="220" y="674" text-anchor="middle" font-size="10" fill="#009900" font-weight="bold">curr [33:2]  (32b)</text>
+  <rect x="340" y="654" width="280" height="32" rx="4" fill="#dae8fc" stroke="#6c8ebf" stroke-width="2"/>
+  <text x="480" y="674" text-anchor="middle" font-size="10" fill="#0066CC" font-weight="bold">prev [65:34]  (32b)</text>
+
+  <text x="100" y="700" font-size="11" fill="#333" font-weight="bold">aligned_d[63:0]</text>
+  <text x="330" y="700" font-size="10" fill="#009900">= curr[33:2] &amp; blk_d_prev_upper    (combinational, zero extra latency)</text>
+
+  <!-- Latency note -->
+  <rect x="750" y="480" width="310" height="100" rx="6" fill="#FFF9E6" stroke="#CCCC99" filter="url(#shadow)"/>
+  <text x="770" y="504" font-size="12" font-weight="bold" fill="#333">Latency to aligned_v</text>
+  <line x1="770" y1="510" x2="1040" y2="510" stroke="#CCCC99"/>
+  <text x="770" y="532" font-size="11" fill="#333">SOF1:     </text><text x="850" y="532" font-size="11" fill="#009900" font-weight="bold">1 clock</text><text x="935" y="532" font-size="10" fill="#666">  (direct)</text>
+  <text x="770" y="554" font-size="11" fill="#333">SOF2/3: </text><text x="850" y="554" font-size="11" fill="#0066CC" font-weight="bold">2 clocks</text><text x="942" y="554" font-size="10" fill="#666">  (barrel shift)</text>
+
+  <!-- Resource note -->
+  <rect x="750" y="600" width="310" height="50" rx="6" fill="#E8F5E9" stroke="#82b366" filter="url(#shadow)"/>
+  <text x="905" y="630" text-anchor="middle" font-size="11" fill="#333" font-weight="bold">138 LUT  /  41 FF  /  0 BRAM</text>
+
+</svg>
