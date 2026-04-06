@@ -1,0 +1,193 @@
+<mxfile host="app.diagrams.net" modified="2026-04-07T00:00:00.000Z" agent="Claude" version="24.0.0">
+  <diagram id="realign_fsm" name="Realign FSM">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="1">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title bar -->
+        <mxCell id="titlebar" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1a1a2e;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="0" y="0" width="1400" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="title" value="eth_hdr_realign  —  SOF Detection &amp; Barrel Shift FSM" style="text;html=1;align=center;verticalAlign=middle;fontSize=18;fontColor=#FFFFFF;fontStyle=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="0" y="5" width="1400" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- ============ FSM STATES ============ -->
+
+        <!-- IDLE_S -->
+        <mxCell id="idle" value="&lt;b style=&quot;font-size:13px&quot;&gt;IDLE_S&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font color=&quot;#666&quot;&gt;Wait for SOF block.&lt;br&gt;aligned_v = 0&lt;br&gt;frame_active = 0&lt;/font&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;shadow=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="540" y="100" width="180" height="120" as="geometry"/>
+        </mxCell>
+
+        <!-- SOF1_DATA_S -->
+        <mxCell id="sof1" value="&lt;b style=&quot;font-size:13px&quot;&gt;SOF1_DATA_S&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font color=&quot;#666&quot;&gt;Direct passthrough.&lt;br&gt;aligned_d = blk_d[65:2]&lt;br&gt;aligned_v = blk_v &amp;amp; !ctrl&lt;br&gt;frame_active = 1&lt;/font&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;shadow=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="160" y="350" width="220" height="140" as="geometry"/>
+        </mxCell>
+
+        <!-- SOF2_PRE_S -->
+        <mxCell id="sof2pre" value="&lt;b style=&quot;font-size:13px&quot;&gt;SOF2_PRE_S&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font color=&quot;#666&quot;&gt;Save upper 32 bits.&lt;br&gt;1 cycle preamble skip.&lt;br&gt;aligned_v = 0&lt;br&gt;frame_active = 1&lt;/font&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;shadow=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="890" y="250" width="220" height="140" as="geometry"/>
+        </mxCell>
+
+        <!-- SOF2_DATA_S -->
+        <mxCell id="sof2" value="&lt;b style=&quot;font-size:13px&quot;&gt;SOF2_DATA_S&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font color=&quot;#666&quot;&gt;Barrel shift output.&lt;br&gt;aligned_d = curr[33:2]&lt;br&gt;             &amp;amp; prev[65:34]&lt;br&gt;aligned_v = blk_v &amp;amp; !ctrl&lt;br&gt;frame_active = 1&lt;/font&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;shadow=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="850" y="480" width="240" height="150" as="geometry"/>
+        </mxCell>
+
+        <!-- ============ TRANSITIONS ============ -->
+
+        <!-- IDLE -> SOF1_DATA (SOF1 detected) -->
+        <mxCell id="t1" value="&lt;font color=&quot;#009900&quot;&gt;&lt;b&gt;SOF1 detected&lt;/b&gt;&lt;br&gt;sof_v=1, sof_type=01&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#009900;strokeWidth=2;fontSize=10;entryX=0.5;entryY=0;exitX=0;exitY=1;" edge="1" parent="1" source="idle" target="sof1">
+          <mxGeometry x="-0.2" y="10" relative="1" as="geometry">
+            <mxPoint as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- IDLE -> SOF2_PRE (SOF2/3 detected) -->
+        <mxCell id="t2" value="&lt;font color=&quot;#0066CC&quot;&gt;&lt;b&gt;SOF2 or SOF3 detected&lt;/b&gt;&lt;br&gt;sof_v=1, sof_type=10/11&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#0066CC;strokeWidth=2;fontSize=10;exitX=1;exitY=1;" edge="1" parent="1" source="idle" target="sof2pre">
+          <mxGeometry x="-0.2" y="-10" relative="1" as="geometry">
+            <mxPoint as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- SOF2_PRE -> SOF2_DATA -->
+        <mxCell id="t3" value="&lt;font color=&quot;#0066CC&quot;&gt;&lt;b&gt;blk_v = 1&lt;/b&gt;&lt;br&gt;save blk_d_prev_upper&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#0066CC;strokeWidth=2;fontSize=10;" edge="1" parent="1" source="sof2pre" target="sof2">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- SOF1_DATA -> IDLE (EOF) -->
+        <mxCell id="t4" value="&lt;font color=&quot;#CC0000&quot;&gt;&lt;b&gt;EOF detected&lt;/b&gt;&lt;br&gt;eof_v=1&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#CC0000;strokeWidth=2;fontSize=10;exitX=0.5;exitY=0;entryX=0;entryY=0.5;" edge="1" parent="1" source="sof1" target="idle">
+          <mxGeometry x="0.2" y="-10" relative="1" as="geometry">
+            <mxPoint as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- SOF2_DATA -> IDLE (EOF) -->
+        <mxCell id="t5" value="&lt;font color=&quot;#CC0000&quot;&gt;&lt;b&gt;EOF&lt;/b&gt;&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#CC0000;strokeWidth=2;fontSize=10;exitX=1;exitY=0;entryX=1;entryY=0.5;" edge="1" parent="1" source="sof2" target="idle">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1200" y="480"/>
+              <mxPoint x="1200" y="160"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- SOF1 self-loop (back-to-back SOF1) -->
+        <mxCell id="t6" value="&lt;font color=&quot;#009900&quot;&gt;back-to-back SOF1&lt;br&gt;eof_v=1 then sof_v=1&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#009900;strokeWidth=1;dashed=1;fontSize=9;curved=1;" edge="1" parent="1" source="sof1" target="sof1">
+          <mxGeometry x="0.2" y="-30" relative="1" as="geometry">
+            <mxPoint as="offset"/>
+            <Array as="points">
+              <mxPoint x="100" y="350"/>
+              <mxPoint x="100" y="490"/>
+              <mxPoint x="270" y="520"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- SOF1 -> SOF2_PRE (SOF2/3 within SOF1 frame) -->
+        <mxCell id="t7" value="&lt;font color=&quot;#0066CC&quot;&gt;SOF2/3&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#0066CC;strokeWidth=1;dashed=1;fontSize=9;" edge="1" parent="1" source="sof1" target="sof2pre">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="460" y="420"/>
+              <mxPoint x="460" y="250"/>
+              <mxPoint x="890" y="250"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- SOF2 -> SOF2_PRE (back-to-back SOF2/3) -->
+        <mxCell id="t8" value="&lt;font color=&quot;#0066CC&quot;&gt;SOF2/3&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#0066CC;strokeWidth=1;dashed=1;fontSize=9;" edge="1" parent="1" source="sof2" target="sof2pre">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1130" y="555"/>
+              <mxPoint x="1130" y="390"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ============ BARREL SHIFT DIAGRAM ============ -->
+
+        <mxCell id="bs_title" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#CCCCCC;strokeWidth=1;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="570" width="620" height="290" as="geometry"/>
+        </mxCell>
+        <mxCell id="bs_label" value="&lt;b&gt;Barrel Shift Detail (SOF2 / SOF3 path)&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;fontStyle=1;fontColor=#333;" vertex="1" parent="1">
+          <mxGeometry x="70" y="578" width="400" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- Previous block -->
+        <mxCell id="prev_blk" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E8E8E8;strokeColor=#999;" vertex="1" parent="1">
+          <mxGeometry x="80" y="640" width="560" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="prev_sync" value="&lt;font size=&quot;1&quot;&gt;sync&lt;br&gt;[1:0]&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#CCCCCC;strokeColor=#999;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="80" y="640" width="40" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="prev_lo" value="&lt;font color=&quot;#999&quot;&gt;prev payload [33:2]&lt;br&gt;(preamble, discarded)&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F0F0F0;strokeColor=#999;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="120" y="640" width="240" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="prev_hi" value="&lt;b&gt;prev payload [65:34]&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#0066CC&quot;&gt;← saved as blk_d_prev_upper&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="360" y="640" width="280" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="prev_label" value="&lt;font color=&quot;#666&quot;&gt;Previous block (cycle N-1)&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="80" y="618" width="200" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- Current block -->
+        <mxCell id="curr_blk" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E8E8E8;strokeColor=#999;" vertex="1" parent="1">
+          <mxGeometry x="80" y="720" width="560" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="curr_sync" value="&lt;font size=&quot;1&quot;&gt;sync&lt;br&gt;[1:0]&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#CCCCCC;strokeColor=#999;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="80" y="720" width="40" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="curr_lo" value="&lt;b&gt;curr payload [33:2]&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#009900&quot;&gt;← lower 32 bits of aligned_d&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="120" y="720" width="240" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="curr_hi" value="curr payload [65:34]&lt;br&gt;&lt;font color=&quot;#0066CC&quot;&gt;(becomes next prev_upper)&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="360" y="720" width="280" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="curr_label" value="&lt;font color=&quot;#666&quot;&gt;Current block (cycle N)&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="80" y="698" width="200" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- Result -->
+        <mxCell id="result_blk" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E6FFE6;strokeColor=#82b366;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="120" y="800" width="520" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="result_lo" value="&lt;b&gt;curr [33:2]&lt;/b&gt;&lt;br&gt;32 bits" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="120" y="800" width="240" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="result_hi" value="&lt;b&gt;prev [65:34]&lt;/b&gt;&lt;br&gt;32 bits" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="360" y="800" width="280" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="result_label" value="&lt;b&gt;aligned_d[63:0]&lt;/b&gt; = curr[33:2] &amp; blk_d_prev_upper[31:0]    &lt;font color=&quot;#009900&quot;&gt;(combinational, zero extra latency)&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="120" y="843" width="520" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrows for barrel shift -->
+        <mxCell id="arr_prev" style="rounded=1;strokeColor=#6c8ebf;strokeWidth=2;dashed=0;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="500" y="680" as="sourcePoint"/>
+            <mxPoint x="500" y="800" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arr_curr" style="rounded=1;strokeColor=#82b366;strokeWidth=2;dashed=0;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="240" y="760" as="sourcePoint"/>
+            <mxPoint x="240" y="800" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- SOF1 path note -->
+        <mxCell id="sof1_note" value="&lt;b&gt;SOF1 path (direct):&lt;/b&gt;&lt;br&gt;aligned_d = blk_d[65:2]&lt;br&gt;&lt;font color=&quot;#009900&quot;&gt;No barrel shift needed&lt;/font&gt;" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;size=14;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=8;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="700" y="610" width="220" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- Latency note -->
+        <mxCell id="lat_note" value="&lt;b&gt;Latency to aligned_v:&lt;/b&gt;&lt;br&gt;SOF1: 1 clock (direct)&lt;br&gt;SOF2/3: 2 clocks (barrel shift)" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;size=14;fillColor=#FFF9E6;strokeColor=#CCCC99;fontSize=10;align=left;spacingLeft=8;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="700" y="700" width="220" height="70" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

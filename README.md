@@ -50,7 +50,7 @@ blk_d[65:0] + blk_v (descrambled 66-bit blocks)
 +--------------------------------------------------------------------------+
 ```
 
-> See [`docs/architecture.drawio`](docs/architecture.drawio) for the detailed Draw.io diagram.
+> See [`eth_header_parser/docs/architecture.drawio`](eth_header_parser/docs/architecture.drawio) for the system diagram, [`eth_hdr_realign.drawio`](eth_header_parser/docs/eth_hdr_realign.drawio) for the realign FSM + barrel shift, and [`eth_hdr_extract.drawio`](eth_header_parser/docs/eth_hdr_extract.drawio) for the per-word extraction pipeline.
 
 ### Data Flow
 
@@ -194,25 +194,27 @@ parse_error : out std_logic
 ## File Structure
 
 ```
+README.md                                  -- This file (repo root)
 eth_header_parser/
   src/
-    eth_hdr_parser_pkg.vhd    -- Constants, types, helper functions
-    eth_fcs_roms_pkg.vhd      -- 8 x 256-entry CRC-32 lookup tables
-    eth_hdr_realign.vhd       -- SOF detection + barrel shift (4-state FSM)
-    eth_hdr_extract.vhd       -- Header extraction (word counter + per-field valid)
-    eth_l2_check.vhd          -- MAC filtering + frame length validation
-    eth_fcs_bridge.vhd        -- 66-bit -> din/din_v converter + 128-deep FIFO
-    eth_fcs.vhd               -- CRC-32 slice-by-8 checker (pipelined)
-    eth_hdr_parser_top.vhd    -- Top-level wrapper
+    eth_hdr_parser_pkg.vhd                 -- Constants, types, helper functions
+    eth_fcs_roms_pkg.vhd                   -- 8 x 256-entry CRC-32 lookup tables
+    eth_hdr_realign.vhd                    -- SOF detection + barrel shift (4-state FSM)
+    eth_hdr_extract.vhd                    -- Header extraction (word counter + per-field valid)
+    eth_l2_check.vhd                       -- MAC filtering + frame length validation
+    eth_fcs_bridge.vhd                     -- 66-bit -> din/din_v converter + 128-deep FIFO
+    eth_fcs.vhd                            -- CRC-32 slice-by-8 checker (pipelined)
+    eth_hdr_parser_top.vhd                 -- Top-level wrapper
   testbench/
-    eth_hdr_parser_tb.vhd     -- 11 test cases with latency measurement
+    eth_hdr_parser_tb.vhd                  -- 11 test cases with latency measurement
   docs/
-    architecture.drawio       -- Draw.io architecture diagram
-  constraints.xdc             -- Timing constraints (500 MHz)
-  Makefile                    -- Vivado XSIM: make simulate / make synth
-  run.tcl                     -- XSIM waveform dump script
-  CLAUDE.md                   -- Design decisions and progress log
-  README.md                   -- This file
+    architecture.drawio                    -- System architecture (Draw.io)
+    eth_hdr_realign.drawio                 -- Realign FSM + barrel shift (Draw.io)
+    eth_hdr_extract.drawio                 -- Per-word extraction pipeline (Draw.io)
+  constraints.xdc                          -- Timing constraints (500 MHz)
+  Makefile                                 -- Vivado XSIM: make simulate / make synth
+  run.tcl                                  -- XSIM waveform dump script
+  CLAUDE.md                                -- Design decisions and progress log
 ```
 
 ---

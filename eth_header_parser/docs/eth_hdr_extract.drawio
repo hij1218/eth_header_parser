@@ -1,0 +1,292 @@
+<mxfile host="app.diagrams.net" modified="2026-04-07T00:00:00.000Z" agent="Claude" version="24.0.0">
+  <diagram id="extract_pipeline" name="Extract Pipeline">
+    <mxGraphModel dx="1800" dy="1400" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1400" math="0" shadow="1">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title bar -->
+        <mxCell id="titlebar" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1a1a2e;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="0" y="0" width="1800" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="title" value="eth_hdr_extract  —  Per-Word Header Field Extraction Pipeline" style="text;html=1;align=center;verticalAlign=middle;fontSize=18;fontColor=#FFFFFF;fontStyle=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="0" y="5" width="1800" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Input arrow -->
+        <mxCell id="inp_label" value="&lt;b&gt;aligned_d[63:0]&lt;/b&gt; + &lt;b&gt;aligned_v&lt;/b&gt;  (from eth_hdr_realign)" style="text;html=1;align=center;verticalAlign=middle;fontSize=12;fontColor=#0066CC;" vertex="1" parent="1">
+          <mxGeometry x="600" y="60" width="500" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- ============ WORD COLUMNS ============ -->
+        <!-- Each word is a column showing the 8-byte layout and what gets extracted -->
+
+        <!-- Column headers -->
+        <mxCell id="hdr_bg" value="" style="rounded=0;fillColor=#f5f5f5;strokeColor=#DDD;" vertex="1" parent="1">
+          <mxGeometry x="30" y="100" width="1740" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- WORD 0 -->
+        <mxCell id="w0h" value="&lt;b&gt;Word 0&lt;/b&gt;" style="text;html=1;align=center;fontSize=12;fontColor=#333;fillColor=#f5f5f5;" vertex="1" parent="1">
+          <mxGeometry x="30" y="100" width="220" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="w0" value="" style="rounded=1;fillColor=#FFFFFF;strokeColor=#DDD;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="30" y="140" width="220" height="200" as="geometry"/>
+        </mxCell>
+        <mxCell id="w0_b0" value="&lt;font color=&quot;#CC0000&quot;&gt;&lt;b&gt;b0-b5&lt;/b&gt;: DMAC [47:0]&lt;/font&gt;" style="rounded=0;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="150" width="200" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="w0_b6" value="&lt;font color=&quot;#0066CC&quot;&gt;&lt;b&gt;b6-b7&lt;/b&gt;: SMAC [15:0]&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#999&quot; size=&quot;1&quot;&gt;saved → smac_lo&lt;/font&gt;" style="rounded=0;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="190" width="200" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="w0_out" value="&lt;font color=&quot;#009900&quot;&gt;&lt;b&gt;→ mac_dst_v = 1&lt;/b&gt;&lt;/font&gt;&lt;br&gt;&lt;font size=&quot;1&quot;&gt;mac_dst[47:0] valid&lt;/font&gt;" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;whiteSpace=wrap;html=1;fontStyle=0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="240" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="w0_lat" value="&lt;b&gt;T+1&lt;/b&gt; (SOF1)&lt;br&gt;&lt;b&gt;T+2&lt;/b&gt; (SOF2/3)" style="text;html=1;align=center;fontSize=9;fontColor=#CC6600;fillColor=#FFF9E6;rounded=1;strokeColor=#CCCC99;" vertex="1" parent="1">
+          <mxGeometry x="55" y="290" width="170" height="35" as="geometry"/>
+        </mxCell>
+
+        <!-- WORD 1 -->
+        <mxCell id="w1h" value="&lt;b&gt;Word 1&lt;/b&gt;" style="text;html=1;align=center;fontSize=12;fontColor=#333;fillColor=#f5f5f5;" vertex="1" parent="1">
+          <mxGeometry x="260" y="100" width="250" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="w1" value="" style="rounded=1;fillColor=#FFFFFF;strokeColor=#DDD;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="260" y="140" width="250" height="310" as="geometry"/>
+        </mxCell>
+        <mxCell id="w1_b0" value="&lt;font color=&quot;#0066CC&quot;&gt;&lt;b&gt;b0-b3&lt;/b&gt;: SMAC [47:16]&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#999&quot; size=&quot;1&quot;&gt;combine with smac_lo&lt;/font&gt;" style="rounded=0;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="270" y="150" width="230" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="w1_b4" value="&lt;b&gt;b4-b5&lt;/b&gt;: raw EtherType" style="rounded=0;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="270" y="190" width="230" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="w1_branch" value="&lt;b&gt;VLAN Branch:&lt;/b&gt;" style="text;html=1;align=left;fontSize=10;fontColor=#666;" vertex="1" parent="1">
+          <mxGeometry x="270" y="225" width="100" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="w1_novlan" value="&lt;font color=&quot;#009900&quot;&gt;No VLAN (0x0800/0x86DD/other)&lt;br&gt;&lt;b&gt;→ ethertype_v = 1&lt;/b&gt;&lt;br&gt;+ early IPv4/IPv6 detect&lt;br&gt;+ IHL, DSCP from b6-b7&lt;/font&gt;" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="270" y="248" width="230" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="w1_vlan" value="&lt;font color=&quot;#9673a6&quot;&gt;VLAN (0x8100 or 0x88A8)&lt;br&gt;vlan1_tci ← b6-b7&lt;br&gt;vlan_state ← &quot;01&quot;&lt;br&gt;&lt;i&gt;defer ethertype to word 2&lt;/i&gt;&lt;/font&gt;" style="rounded=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="270" y="315" width="230" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="w1_out" value="&lt;font color=&quot;#009900&quot;&gt;&lt;b&gt;→ mac_src_v = 1&lt;/b&gt;&lt;/font&gt;" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="270" y="380" width="230" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="w1_lat" value="&lt;b&gt;T+2&lt;/b&gt; (SOF1)&lt;br&gt;&lt;b&gt;T+3&lt;/b&gt; (SOF2/3)" style="text;html=1;align=center;fontSize=9;fontColor=#CC6600;fillColor=#FFF9E6;rounded=1;strokeColor=#CCCC99;" vertex="1" parent="1">
+          <mxGeometry x="300" y="418" width="170" height="35" as="geometry"/>
+        </mxCell>
+
+        <!-- WORD 2 -->
+        <mxCell id="w2h" value="&lt;b&gt;Word 2&lt;/b&gt;" style="text;html=1;align=center;fontSize=12;fontColor=#333;fillColor=#f5f5f5;" vertex="1" parent="1">
+          <mxGeometry x="520" y="100" width="220" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="w2" value="" style="rounded=1;fillColor=#FFFFFF;strokeColor=#DDD;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="520" y="140" width="220" height="260" as="geometry"/>
+        </mxCell>
+        <mxCell id="w2_1v" value="&lt;font color=&quot;#9673a6&quot;&gt;&lt;b&gt;1 VLAN path:&lt;/b&gt;&lt;/font&gt;&lt;br&gt;b0-b1: real EtherType&lt;br&gt;b2-b3: IPv4 IHL+DSCP&lt;br&gt;&lt;font color=&quot;#009900&quot;&gt;&lt;b&gt;→ ethertype_v = 1&lt;/b&gt;&lt;br&gt;vlan_count = &quot;01&quot;&lt;/font&gt;" style="rounded=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="530" y="150" width="200" height="75" as="geometry"/>
+        </mxCell>
+        <mxCell id="w2_qinq" value="&lt;font color=&quot;#9673a6&quot;&gt;If b0-b1 = 0x8100 (QinQ):&lt;br&gt;vlan2_tci ← b2-b3&lt;br&gt;vlan_state ← &quot;10&quot;&lt;br&gt;&lt;i&gt;defer to word 3&lt;/i&gt;&lt;/font&gt;" style="rounded=1;fillColor=#FCE4EC;strokeColor=#C62828;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="530" y="232" width="200" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="w2_0v" value="&lt;b&gt;No VLAN path:&lt;/b&gt;&lt;br&gt;IPv4: totlen, proto&lt;br&gt;IPv6: plen, nhdr, src[0:1]" style="rounded=0;fillColor=#FFF9E6;strokeColor=#CCCC99;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="530" y="300" width="200" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="w2_lat" value="&lt;b&gt;T+3&lt;/b&gt; (1 VLAN)" style="text;html=1;align=center;fontSize=9;fontColor=#CC6600;fillColor=#FFF9E6;rounded=1;strokeColor=#CCCC99;" vertex="1" parent="1">
+          <mxGeometry x="560" y="360" width="150" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- WORD 3 -->
+        <mxCell id="w3h" value="&lt;b&gt;Word 3&lt;/b&gt;" style="text;html=1;align=center;fontSize=12;fontColor=#333;fillColor=#f5f5f5;" vertex="1" parent="1">
+          <mxGeometry x="750" y="100" width="220" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="w3" value="" style="rounded=1;fillColor=#FFFFFF;strokeColor=#DDD;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="750" y="140" width="220" height="220" as="geometry"/>
+        </mxCell>
+        <mxCell id="w3_2v" value="&lt;font color=&quot;#C62828&quot;&gt;&lt;b&gt;2 VLAN (QinQ) path:&lt;/b&gt;&lt;/font&gt;&lt;br&gt;b0-b1: real EtherType&lt;br&gt;&lt;font color=&quot;#009900&quot;&gt;&lt;b&gt;→ ethertype_v = 1&lt;/b&gt;&lt;br&gt;vlan_count = &quot;10&quot;&lt;/font&gt;" style="rounded=1;fillColor=#FCE4EC;strokeColor=#C62828;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="760" y="150" width="200" height="65" as="geometry"/>
+        </mxCell>
+        <mxCell id="w3_1v" value="&lt;b&gt;1 VLAN:&lt;/b&gt; IPv4 proto&lt;br&gt;or IPv6 plen/nhdr" style="rounded=0;fillColor=#FFF9E6;strokeColor=#CCCC99;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="760" y="222" width="200" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="w3_0v" value="&lt;b&gt;No VLAN:&lt;/b&gt;&lt;br&gt;IPv4: src_ip [31:0]&lt;br&gt;       dst_ip_hi ← b6-b7&lt;br&gt;IPv6: src_addr mid [63:0]" style="rounded=0;fillColor=#FFF9E6;strokeColor=#CCCC99;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="760" y="264" width="200" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="w3_lat" value="&lt;b&gt;T+4&lt;/b&gt; (2 VLAN)" style="text;html=1;align=center;fontSize=9;fontColor=#CC6600;fillColor=#FFF9E6;rounded=1;strokeColor=#CCCC99;" vertex="1" parent="1">
+          <mxGeometry x="785" y="328" width="150" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- WORD 4 -->
+        <mxCell id="w4h" value="&lt;b&gt;Word 4&lt;/b&gt;" style="text;html=1;align=center;fontSize=12;fontColor=#333;fillColor=#f5f5f5;" vertex="1" parent="1">
+          <mxGeometry x="980" y="100" width="220" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="w4" value="" style="rounded=1;fillColor=#FFFFFF;strokeColor=#DDD;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="980" y="140" width="220" height="260" as="geometry"/>
+        </mxCell>
+        <mxCell id="w4_0v_ip4" value="&lt;font color=&quot;#009900&quot;&gt;&lt;b&gt;No VLAN + IPv4:&lt;/b&gt;&lt;br&gt;b0-b1: dst_ip [15:0]&lt;br&gt;(combine with dst_hi)&lt;br&gt;b2-b3: L4 src port&lt;br&gt;b4-b5: L4 dst port&lt;br&gt;&lt;b&gt;→ ipv4_v = 1&lt;/b&gt;&lt;br&gt;&lt;b&gt;→ l4_ports_v = 1&lt;/b&gt;&lt;/font&gt;" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="990" y="150" width="200" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="w4_0v_ip6" value="&lt;b&gt;No VLAN + IPv6:&lt;/b&gt;&lt;br&gt;b0-b5: src_addr tail&lt;br&gt;b6-b7: dst_addr [15:0]" style="rounded=0;fillColor=#FFF9E6;strokeColor=#CCCC99;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="990" y="268" width="200" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="w4_1v" value="&lt;b&gt;1 VLAN + IPv4:&lt;/b&gt;&lt;br&gt;src_ip, dst_ip_hi" style="rounded=0;fillColor=#FFF9E6;strokeColor=#CCCC99;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="990" y="325" width="200" height="35" as="geometry"/>
+        </mxCell>
+        <mxCell id="w4_lat" value="&lt;b&gt;T+5&lt;/b&gt; (no VLAN IPv4)" style="text;html=1;align=center;fontSize=9;fontColor=#CC6600;fillColor=#FFF9E6;rounded=1;strokeColor=#CCCC99;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="370" width="170" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- WORD 5 -->
+        <mxCell id="w5h" value="&lt;b&gt;Word 5&lt;/b&gt;" style="text;html=1;align=center;fontSize=12;fontColor=#333;fillColor=#f5f5f5;" vertex="1" parent="1">
+          <mxGeometry x="1210" y="100" width="170" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="w5" value="" style="rounded=1;fillColor=#FFFFFF;strokeColor=#DDD;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1210" y="140" width="170" height="220" as="geometry"/>
+        </mxCell>
+        <mxCell id="w5_1v" value="&lt;font color=&quot;#009900&quot;&gt;&lt;b&gt;1 VLAN + IPv4:&lt;/b&gt;&lt;br&gt;dst_ip + L4 ports&lt;br&gt;&lt;b&gt;→ ipv4_v = 1&lt;/b&gt;&lt;br&gt;&lt;b&gt;→ l4_ports_v = 1&lt;/b&gt;&lt;/font&gt;" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1220" y="150" width="150" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="w5_0v_ip6" value="&lt;b&gt;No VLAN IPv6:&lt;/b&gt;&lt;br&gt;dst_addr mid [63:0]" style="rounded=0;fillColor=#FFF9E6;strokeColor=#CCCC99;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1220" y="228" width="150" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="w5_2v" value="&lt;b&gt;2 VLAN + IPv4:&lt;/b&gt;&lt;br&gt;src_ip, dst_ip_hi" style="rounded=0;fillColor=#FFF9E6;strokeColor=#CCCC99;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1220" y="275" width="150" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="w5_lat" value="&lt;b&gt;T+6&lt;/b&gt; (1V IPv4)" style="text;html=1;align=center;fontSize=9;fontColor=#CC6600;fillColor=#FFF9E6;rounded=1;strokeColor=#CCCC99;" vertex="1" parent="1">
+          <mxGeometry x="1225" y="325" width="140" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- WORD 6-7 -->
+        <mxCell id="w67h" value="&lt;b&gt;Word 6-7&lt;/b&gt;" style="text;html=1;align=center;fontSize=12;fontColor=#333;fillColor=#f5f5f5;" vertex="1" parent="1">
+          <mxGeometry x="1390" y="100" width="180" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="w67" value="" style="rounded=1;fillColor=#FFFFFF;strokeColor=#DDD;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1390" y="140" width="180" height="280" as="geometry"/>
+        </mxCell>
+        <mxCell id="w6_2v" value="&lt;font color=&quot;#009900&quot;&gt;&lt;b&gt;W6: 2 VLAN IPv4:&lt;/b&gt;&lt;br&gt;dst_ip + L4 ports&lt;br&gt;&lt;b&gt;→ ipv4_v = 1&lt;/b&gt;&lt;br&gt;&lt;b&gt;→ l4_ports_v = 1&lt;/b&gt;&lt;/font&gt;" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1400" y="150" width="160" height="65" as="geometry"/>
+        </mxCell>
+        <mxCell id="w6_ip6" value="&lt;font color=&quot;#009900&quot;&gt;&lt;b&gt;W6: No VLAN IPv6:&lt;/b&gt;&lt;br&gt;Assemble 128-bit&lt;br&gt;src + dst addresses&lt;br&gt;&lt;b&gt;→ ipv6_v = 1&lt;/b&gt;&lt;br&gt;save l4_sport from b6-b7&lt;/font&gt;" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1400" y="222" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="w7_ip6" value="&lt;font color=&quot;#009900&quot;&gt;&lt;b&gt;W7: No VLAN IPv6:&lt;/b&gt;&lt;br&gt;b0-b1: L4 dst port&lt;br&gt;&lt;b&gt;→ l4_ports_v = 1&lt;/b&gt;&lt;/font&gt;" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1400" y="310" width="160" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="w67_lat" value="&lt;b&gt;T+7&lt;/b&gt; (2V IPv4)&lt;br&gt;&lt;b&gt;T+8&lt;/b&gt; (IPv6)" style="text;html=1;align=center;fontSize=9;fontColor=#CC6600;fillColor=#FFF9E6;rounded=1;strokeColor=#CCCC99;" vertex="1" parent="1">
+          <mxGeometry x="1415" y="375" width="130" height="35" as="geometry"/>
+        </mxCell>
+
+        <!-- ============ VLAN BRANCHING DIAGRAM ============ -->
+        <mxCell id="vlan_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#DDD;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="30" y="480" width="940" height="380" as="geometry"/>
+        </mxCell>
+        <mxCell id="vlan_title" value="&lt;b&gt;VLAN Detection &amp; EtherType Resolution State Machine&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;fontStyle=1;fontColor=#333;" vertex="1" parent="1">
+          <mxGeometry x="50" y="488" width="500" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- Ethernet header byte layout -->
+        <mxCell id="eth_layout" value="" style="rounded=0;fillColor=#f5f5f5;strokeColor=#CCC;" vertex="1" parent="1">
+          <mxGeometry x="50" y="530" width="900" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="eth_dmac" value="&lt;b&gt;DMAC&lt;/b&gt;&lt;br&gt;6B" style="rounded=0;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="530" width="120" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="eth_smac" value="&lt;b&gt;SMAC&lt;/b&gt;&lt;br&gt;6B" style="rounded=0;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="170" y="530" width="120" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="eth_etype" value="&lt;b&gt;EType&lt;/b&gt;&lt;br&gt;2B" style="rounded=0;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="290" y="530" width="60" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="eth_rest" value="&lt;font color=&quot;#999&quot;&gt;... payload ...&lt;/font&gt;" style="rounded=0;fillColor=#f5f5f5;strokeColor=#CCC;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="350" y="530" width="600" height="45" as="geometry"/>
+        </mxCell>
+
+        <!-- 3 branching paths -->
+        <!-- No VLAN -->
+        <mxCell id="nv_box" value="" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="610" width="280" height="230" as="geometry"/>
+        </mxCell>
+        <mxCell id="nv_title" value="&lt;b&gt;Path A: No VLAN&lt;/b&gt;     vlan_count = &quot;00&quot;" style="text;html=1;align=left;fontSize=11;fontColor=#333;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="618" width="260" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="nv_cond" value="EtherType != 0x8100, != 0x88A8" style="text;html=1;align=left;fontSize=9;fontColor=#666;" vertex="1" parent="1">
+          <mxGeometry x="60" y="640" width="260" height="15" as="geometry"/>
+        </mxCell>
+        <mxCell id="nv_w1" value="&lt;b&gt;Word 1:&lt;/b&gt; ethertype_v = 1" style="rounded=0;fillColor=#E8F5E9;strokeColor=#82b366;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="660" width="260" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="nv_w4" value="&lt;b&gt;Word 4 (IPv4):&lt;/b&gt; ipv4_v, l4_ports_v = 1" style="rounded=0;fillColor=#E8F5E9;strokeColor=#82b366;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="690" width="260" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="nv_w7" value="&lt;b&gt;Word 6-7 (IPv6):&lt;/b&gt; ipv6_v, l4_ports_v = 1" style="rounded=0;fillColor=#E8F5E9;strokeColor=#82b366;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="720" width="260" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="nv_lat" value="&lt;font size=&quot;2&quot;&gt;IPv4 L4 ports: &lt;b&gt;T+5&lt;/b&gt;&lt;br&gt;IPv6 L4 ports: &lt;b&gt;T+8&lt;/b&gt;&lt;/font&gt;" style="text;html=1;align=center;fontSize=10;fontColor=#CC6600;fillColor=#FFF9E6;rounded=1;strokeColor=#CCCC99;" vertex="1" parent="1">
+          <mxGeometry x="80" y="760" width="220" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- 1 VLAN -->
+        <mxCell id="v1_box" value="" style="rounded=1;fillColor=#e1d5e7;strokeColor=#9673a6;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="350" y="610" width="280" height="230" as="geometry"/>
+        </mxCell>
+        <mxCell id="v1_title" value="&lt;b&gt;Path B: 1 VLAN (802.1Q)&lt;/b&gt;     vlan_count = &quot;01&quot;" style="text;html=1;align=left;fontSize=11;fontColor=#333;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="360" y="618" width="260" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="v1_cond" value="EtherType = 0x8100" style="text;html=1;align=left;fontSize=9;fontColor=#666;" vertex="1" parent="1">
+          <mxGeometry x="360" y="640" width="260" height="15" as="geometry"/>
+        </mxCell>
+        <mxCell id="v1_w1" value="&lt;b&gt;Word 1:&lt;/b&gt; save vlan1_tci" style="rounded=0;fillColor=#F3E5F5;strokeColor=#9673a6;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="360" y="660" width="260" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="v1_w2" value="&lt;b&gt;Word 2:&lt;/b&gt; ethertype_v = 1 (+1 clk)" style="rounded=0;fillColor=#F3E5F5;strokeColor=#9673a6;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="360" y="690" width="260" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="v1_w5" value="&lt;b&gt;Word 5 (IPv4):&lt;/b&gt; ipv4_v, l4_ports_v = 1" style="rounded=0;fillColor=#F3E5F5;strokeColor=#9673a6;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="360" y="720" width="260" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="v1_lat" value="&lt;font size=&quot;2&quot;&gt;IPv4 L4 ports: &lt;b&gt;T+6&lt;/b&gt; (+1 vs no VLAN)&lt;/font&gt;" style="text;html=1;align=center;fontSize=10;fontColor=#CC6600;fillColor=#FFF9E6;rounded=1;strokeColor=#CCCC99;" vertex="1" parent="1">
+          <mxGeometry x="380" y="760" width="220" height="35" as="geometry"/>
+        </mxCell>
+
+        <!-- 2 VLAN QinQ -->
+        <mxCell id="v2_box" value="" style="rounded=1;fillColor=#FCE4EC;strokeColor=#C62828;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="650" y="610" width="300" height="230" as="geometry"/>
+        </mxCell>
+        <mxCell id="v2_title" value="&lt;b&gt;Path C: 2 VLAN QinQ (802.1ad)&lt;/b&gt;     vlan_count = &quot;10&quot;" style="text;html=1;align=left;fontSize=11;fontColor=#333;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="660" y="618" width="280" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="v2_cond" value="EtherType = 0x88A8, then inner = 0x8100" style="text;html=1;align=left;fontSize=9;fontColor=#666;" vertex="1" parent="1">
+          <mxGeometry x="660" y="640" width="280" height="15" as="geometry"/>
+        </mxCell>
+        <mxCell id="v2_w1" value="&lt;b&gt;Word 1:&lt;/b&gt; save vlan1_tci (outer S-tag)" style="rounded=0;fillColor=#FFEBEE;strokeColor=#C62828;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="660" y="660" width="280" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="v2_w2" value="&lt;b&gt;Word 2:&lt;/b&gt; save vlan2_tci (inner C-tag)" style="rounded=0;fillColor=#FFEBEE;strokeColor=#C62828;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="660" y="690" width="280" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="v2_w3" value="&lt;b&gt;Word 3:&lt;/b&gt; ethertype_v = 1 (+2 clk)" style="rounded=0;fillColor=#FFEBEE;strokeColor=#C62828;fontSize=9;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="660" y="720" width="280" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="v2_lat" value="&lt;font size=&quot;2&quot;&gt;IPv4 L4 ports: &lt;b&gt;T+7&lt;/b&gt; (+2 vs no VLAN)&lt;/font&gt;" style="text;html=1;align=center;fontSize=10;fontColor=#CC6600;fillColor=#FFF9E6;rounded=1;strokeColor=#CCCC99;" vertex="1" parent="1">
+          <mxGeometry x="690" y="760" width="230" height="35" as="geometry"/>
+        </mxCell>
+
+        <!-- IPv6 address assembly note -->
+        <mxCell id="ipv6_note" value="&lt;b&gt;IPv6 Address Assembly (128-bit, no VLAN path)&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font face=&quot;Courier New&quot; size=&quot;1&quot;&gt;Word 2: ipv6_src_b01   [15:0]     ← bytes 6-7&lt;br&gt;Word 3: ipv6_src_mid   [63:0]     ← bytes 0-7 (full word)&lt;br&gt;Word 4: ipv6_src_tail  [47:0]     ← bytes 0-5&lt;br&gt;         ipv6_dst_b01  [15:0]     ← bytes 6-7&lt;br&gt;Word 5: ipv6_dst_mid   [63:0]     ← bytes 0-7 (full word)&lt;br&gt;Word 6: ipv6_dst_tail  [47:0]     ← bytes 0-5&lt;br&gt;         l4_sport      [15:0]     ← bytes 6-7 (save)&lt;br&gt;Word 7: l4_dport       [15:0]     ← bytes 0-1&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font size=&quot;1&quot;&gt;ipv6_src = src_b01 &amp; src_mid &amp; src_tail = 16+64+48 = 128 bits&lt;br&gt;ipv6_dst = dst_b01 &amp; dst_mid &amp; dst_tail = 16+64+48 = 128 bits&lt;/font&gt;" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;size=18;fillColor=#FFF9E6;strokeColor=#CCCC99;fontSize=10;align=left;spacingLeft=10;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="480" width="420" height="240" as="geometry"/>
+        </mxCell>
+
+        <!-- Valid pulse summary table -->
+        <mxCell id="summary_bg" value="" style="rounded=1;fillColor=#FAFAFA;strokeColor=#DDD;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="740" width="420" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="summary_title" value="&lt;b&gt;Per-Field Valid Pulse Summary&lt;/b&gt;" style="text;html=1;align=left;fontSize=12;fontColor=#333;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="748" width="300" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="summary_tbl" value="&lt;font face=&quot;Courier New&quot; size=&quot;1&quot;&gt;Signal        No VLAN   1 VLAN   2 VLAN&lt;br&gt;─────────────────────────────────────&lt;br&gt;mac_dst_v     Word 0    Word 0   Word 0&lt;br&gt;mac_src_v     Word 1    Word 1   Word 1&lt;br&gt;ethertype_v   Word 1    Word 2   Word 3&lt;br&gt;ipv4_v        Word 4    Word 5   Word 6&lt;br&gt;l4_ports_v    Word 4    Word 5   Word 6  (IPv4)&lt;br&gt;ipv6_v        Word 6    —        —&lt;br&gt;l4_ports_v    Word 7    —        —       (IPv6)&lt;/font&gt;" style="text;html=1;align=left;fontSize=10;fontColor=#333;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="772" width="400" height="90" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
