@@ -1,0 +1,133 @@
+<mxfile host="app.diagrams.net" modified="2026-04-07T00:00:00.000Z" agent="Claude" version="24.0.0">
+  <diagram id="arch" name="System Architecture">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="title" value="&lt;b&gt;eth_header_parser — System Architecture&lt;/b&gt;&lt;br&gt;Ultra-Low-Latency 10GBASE-R Header Parser (500 MHz, xcvu11p)" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="400" y="10" width="700" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Input block -->
+        <mxCell id="input" value="&lt;b&gt;10GBASE-R PCS&lt;/b&gt;&lt;br&gt;(upstream)" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="620" y="70" width="200" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Input signals -->
+        <mxCell id="inp_sig" value="blk_d[65:0] + blk_v&lt;br&gt;(descrambled 66-bit blocks)" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontColor=#0066CC;" vertex="1" parent="1">
+          <mxGeometry x="600" y="125" width="240" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- Fan-out arrows -->
+        <mxCell id="e_fan1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0066CC;strokeWidth=2;" edge="1" parent="1" source="input" target="realign">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_fan2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0066CC;strokeWidth=2;" edge="1" parent="1" source="input" target="fcs_bridge">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_fan3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0066CC;strokeWidth=2;" edge="1" parent="1" source="input" target="l2_check">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- eth_hdr_realign -->
+        <mxCell id="realign" value="&lt;b&gt;eth_hdr_realign&lt;/b&gt;&lt;hr size=&quot;1&quot;&gt;SOF1/SOF2/SOF3 detection&lt;br&gt;Barrel shift for lane-4 SOFs&lt;br&gt;Combinational aligned output&lt;br&gt;&lt;br&gt;&lt;font color=&quot;#999999&quot;&gt;FSM: IDLE → SOF1_DATA&lt;br&gt;       → SOF2_PRE → SOF2_DATA&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font color=&quot;#009900&quot;&gt;138 LUT / 41 FF&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;fontSize=10;align=center;" vertex="1" parent="1">
+          <mxGeometry x="160" y="200" width="220" height="160" as="geometry"/>
+        </mxCell>
+
+        <!-- eth_fcs_bridge -->
+        <mxCell id="fcs_bridge" value="&lt;b&gt;eth_fcs_bridge&lt;/b&gt;&lt;hr size=&quot;1&quot;&gt;66-bit → din[63:0] / din_v[7:0]&lt;br&gt;128-deep skid FIFO (72-bit)&lt;br&gt;50% duty output (emit_phase)&lt;br&gt;8-cycle drain after EOF&lt;br&gt;Idle suppression in IDLE_S&lt;br&gt;&lt;br&gt;&lt;font color=&quot;#009900&quot;&gt;169 LUT / 76 FF&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;verticalAlign=top;fontSize=10;align=center;" vertex="1" parent="1">
+          <mxGeometry x="600" y="200" width="220" height="160" as="geometry"/>
+        </mxCell>
+
+        <!-- eth_l2_check -->
+        <mxCell id="l2_check" value="&lt;b&gt;eth_l2_check&lt;/b&gt;&lt;hr size=&quot;1&quot;&gt;Station MAC matching&lt;br&gt;Broadcast detection&lt;br&gt;Frame length counter&lt;br&gt;Runt (&amp;lt;64B) / Jumbo check&lt;br&gt;&lt;br&gt;&lt;font color=&quot;#009900&quot;&gt;26 LUT / 38 FF&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;verticalAlign=top;fontSize=10;align=center;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="200" width="200" height="160" as="geometry"/>
+        </mxCell>
+
+        <!-- Aligned signal label -->
+        <mxCell id="lbl_aligned" value="aligned_d[63:0]&lt;br&gt;aligned_v" style="text;html=1;align=center;verticalAlign=middle;fontSize=9;fontColor=#0066CC;" vertex="1" parent="1">
+          <mxGeometry x="200" y="370" width="120" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- eth_hdr_extract -->
+        <mxCell id="extract" value="&lt;b&gt;eth_hdr_extract&lt;/b&gt;&lt;hr size=&quot;1&quot;&gt;Word counter (5-bit)&lt;br&gt;Per-field valid generation&lt;br&gt;VLAN 0/1/2 tag decode&lt;br&gt;IPv4 header extraction&lt;br&gt;IPv6 header extraction (128-bit addr)&lt;br&gt;TCP/UDP port extraction&lt;br&gt;extract16() / extract32() helpers&lt;br&gt;&lt;br&gt;&lt;font color=&quot;#009900&quot;&gt;55 LUT / 550 FF&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;verticalAlign=top;fontSize=10;align=center;" vertex="1" parent="1">
+          <mxGeometry x="130" y="420" width="260" height="180" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrow realign -> extract -->
+        <mxCell id="e_r2e" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0066CC;strokeWidth=2;" edge="1" parent="1" source="realign" target="extract">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- eth_fcs -->
+        <mxCell id="fcs" value="&lt;b&gt;eth_fcs&lt;/b&gt;&lt;hr size=&quot;1&quot;&gt;CRC-32 slice-by-8&lt;br&gt;(Kounavis &amp;amp; Berry 2008)&lt;br&gt;&lt;br&gt;8 × 256×32 ROM tables&lt;br&gt;(rom_style = distributed)&lt;br&gt;&lt;br&gt;2-stage pipelined feedback:&lt;br&gt;  sliced_q / slice_q registers&lt;br&gt;  crc_wr_req deferred update&lt;br&gt;&lt;br&gt;6-stage data pipe (pipe[0..5])&lt;br&gt;&lt;br&gt;&lt;font color=&quot;#009900&quot;&gt;725 LUT / 247 FF&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;verticalAlign=top;fontSize=10;align=center;" vertex="1" parent="1">
+          <mxGeometry x="570" y="420" width="260" height="220" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrow bridge -> fcs -->
+        <mxCell id="e_b2f" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#D6B656;strokeWidth=2;" edge="1" parent="1" source="fcs_bridge" target="fcs">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="lbl_b2f" value="din[63:0], din_v[7:0]&lt;br&gt;fcs_clk_en (50% max)" style="text;html=1;align=center;fontSize=9;fontColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="615" y="385" width="170" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- Output: Header Fields -->
+        <mxCell id="out_hdr" value="&lt;b&gt;Header Fields Output&lt;/b&gt;&lt;hr size=&quot;1&quot;&gt;&lt;font size=&quot;1&quot;&gt;mac_dst_v, mac_dst[47:0]&lt;br&gt;mac_src_v, mac_src[47:0]&lt;br&gt;ethertype_v, ethertype[15:0]&lt;br&gt;vlan_count[1:0], vlan1/2_tci[15:0]&lt;br&gt;ipv4_v, ipv4_src/dst[31:0], ipv4_proto&lt;br&gt;ipv6_v, ipv6_src/dst[127:0], ipv6_nhdr&lt;br&gt;l4_ports_v, l4_src/dst_port[15:0]&lt;br&gt;is_tcp, is_udp, is_ipv4, is_ipv6&lt;/font&gt;" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="80" y="660" width="310" height="150" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrow extract -> out_hdr -->
+        <mxCell id="e_e2o" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82b366;strokeWidth=2;" edge="1" parent="1" source="extract" target="out_hdr">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Output: FCS -->
+        <mxCell id="out_fcs" value="&lt;b&gt;FCS Output&lt;/b&gt;&lt;hr size=&quot;1&quot;&gt;fcs_good&lt;br&gt;fcs_bad" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="600" y="700" width="180" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrow fcs -> out_fcs -->
+        <mxCell id="e_f2o" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#D6B656;strokeWidth=2;" edge="1" parent="1" source="fcs" target="out_fcs">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Output: L2 -->
+        <mxCell id="out_l2" value="&lt;b&gt;L2 Check Output&lt;/b&gt;&lt;hr size=&quot;1&quot;&gt;l2_good, l2_bad&lt;br&gt;mac_match, mac_bcast&lt;br&gt;frame_len[15:0]&lt;br&gt;frame_runt, frame_jumbo" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="440" width="210" height="110" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrow l2 -> out_l2 -->
+        <mxCell id="e_l2o" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#9673a6;strokeWidth=2;" edge="1" parent="1" source="l2_check" target="out_l2">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Latency annotations -->
+        <mxCell id="lat_box" value="&lt;b&gt;Latency (SOF1, clocks from sof_v)&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font face=&quot;Courier New&quot; size=&quot;1&quot;&gt;T+0  sof_v&lt;br&gt;T+1  mac_dst_v  ←  3.2 ns @ 312 MHz&lt;br&gt;T+2  mac_src_v, ethertype_v&lt;br&gt;T+5  ipv4_v, l4_ports_v  ←  16 ns&lt;br&gt;T+8  ipv6_v, l4_ports_v  ←  26 ns&lt;br&gt;EOF  l2_good/bad, fcs_good/bad&lt;/font&gt;" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;size=15;fillColor=#FFF9E6;strokeColor=#CCCC99;fontSize=10;align=left;verticalAlign=top;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="600" width="280" height="150" as="geometry"/>
+        </mxCell>
+
+        <!-- CRC pipeline detail box -->
+        <mxCell id="crc_detail" value="&lt;b&gt;CRC Feedback Pipeline (500 MHz)&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;font face=&quot;Courier New&quot; size=&quot;1&quot;&gt;clk_en=1: sliced = crc_reg XOR pipe[3]&lt;br&gt;          sliced_q &amp;lt;= sliced  (REG)&lt;br&gt;          slice_q  &amp;lt;= slice   (REG)&lt;br&gt;          crc_wr_req = 1&lt;br&gt;&lt;br&gt;clk_en=0: spo* = ROM(sliced_q)  (DIST)&lt;br&gt;          crcgen_new = XOR(spo*)&lt;br&gt;          crc_reg &amp;lt;= crcgen_new&lt;br&gt;          crc_wr_req = 0&lt;/font&gt;" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;size=15;fillColor=#FFF9E6;strokeColor=#CCCC99;fontSize=10;align=left;verticalAlign=top;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="870" y="420" width="270" height="170" as="geometry"/>
+        </mxCell>
+
+        <!-- Top-level wrapper border -->
+        <mxCell id="top_border" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#333333;strokeWidth=2;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="180" width="1200" height="500" as="geometry"/>
+        </mxCell>
+        <mxCell id="top_label" value="&lt;b&gt;eth_hdr_parser_top&lt;/b&gt;    (1,426 LUT / 1,569 FF / 0 BRAM / 0 DSP)" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="110" y="183" width="500" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- Color legend -->
+        <mxCell id="legend" value="&lt;b&gt;Legend&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#6C8EBF&quot;&gt;■&lt;/font&gt; Alignment    &lt;font color=&quot;#82B366&quot;&gt;■&lt;/font&gt; Extraction    &lt;font color=&quot;#D6B656&quot;&gt;■&lt;/font&gt; FCS/CRC    &lt;font color=&quot;#9673A6&quot;&gt;■&lt;/font&gt; L2 Check" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="400" y="860" width="500" height="30" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
